@@ -1,19 +1,24 @@
 package com.sdi.tests.Tests;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
+import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.firefox.FirefoxBinary;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxProfile;
+
+import com.sdi.tests.utils.SeleniumUtils;
 
 //Ordenamos las pruebas por el nombre del método
 @FixMethodOrder(MethodSorters.NAME_ASCENDING) 
@@ -34,7 +39,8 @@ public class PlantillaSDI2_Tests1617 {
 		FirefoxBinary ffBinary = new FirefoxBinary(pathToBinary);
 		FirefoxProfile firefoxProfile = new FirefoxProfile();       
 		driver = new FirefoxDriver(ffBinary,firefoxProfile);
-		driver.get("http://localhost:8180/sdi2-n");
+//		driver.get("http://localhost:8180/sdi2-n");
+		driver.get("http://localhost:8280/Notaneitor");									//TODO: dejar como estaba
 		//Este código es para ejecutar con una versión instalada de Firex 46.0 
 		//driver = new FirefoxDriver();
 		//driver.get("http://localhost:8180/sdi2-n");			
@@ -43,7 +49,27 @@ public class PlantillaSDI2_Tests1617 {
 	public void end()
 	{
 		//Cerramos el navegador
-		//driver.quit();
+		driver.quit();
+	}
+	
+	/**
+	 * Rellena el formulario indicado en formID, escribiendo en cada campo indicado por 
+	 * la key del mapa params el texto correspondiente a su contenido. Envía el 
+	 * formulario pulsando el botón indicado en buttonID
+	 * @param formID id del formulario a rellenar
+	 * @param buttonID id del botón a pulsar
+	 * @param params mapa con pares nombre de campo - contenido
+	 */
+	private void fillForm(String formID, String buttonID, Map<String,String> params){
+		for(String field : params.keySet()){
+			WebElement nombre = driver.findElement(By.id(formID + ":" + field));
+			nombre.click();
+			nombre.clear();
+			nombre.sendKeys(params.get(field));
+		}
+		//Pulsar el botón.
+		By boton = By.id(formID + ":" + buttonID);
+		driver.findElement(boton).click();	
 	}
 
 	//PRUEBAS
@@ -51,7 +77,13 @@ public class PlantillaSDI2_Tests1617 {
 	//PR01: Autentificar correctamente al administrador.
 	@Test
     public void prueba01() {
-		assertTrue(false);	
+		Map<String, String> params = new HashMap<>();
+		params.put("login", "admin1");
+		params.put("password", "admin1");
+		
+		fillForm("form-principal", "btnLogin", params);
+		
+		SeleniumUtils.EsperaCargaPagina(driver, "id", "form-users", 5);
     }
 	//PR02: Fallo en la autenticación del administrador por introducir mal el login.
 	@Test
