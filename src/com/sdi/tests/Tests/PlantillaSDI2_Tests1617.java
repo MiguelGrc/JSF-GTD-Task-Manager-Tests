@@ -81,19 +81,31 @@ public class PlantillaSDI2_Tests1617 {
 		params.put("login", "admin1");
 		params.put("password", "admin1");
 		
-		fillForm("form-principal", "btnLogin", params);
+		fillForm("form-principal", "login-button", params);
 		
 		SeleniumUtils.EsperaCargaPagina(driver, "id", "form-users", 5);
     }
 	//PR02: Fallo en la autenticación del administrador por introducir mal el login.
 	@Test
     public void prueba02() {
-		assertTrue(false);
+		Map<String, String> params = new HashMap<>();
+		params.put("login", "adminFail");
+		params.put("password", "admin1");
+		
+		fillForm("form-principal", "login-button", params);
+		
+		SeleniumUtils.EsperaCargaPagina(driver, "id", "form-principal", 5);						//TODO: test más especifico?
     }
 	//PR03: Fallo en la autenticación del administrador por introducir mal la password.
 	@Test
     public void prueba03() {
-		assertTrue(false);
+		Map<String, String> params = new HashMap<>();
+		params.put("login", "admin");
+		params.put("password", "adminFail");
+		
+		fillForm("form-principal", "login-button", params);
+		
+		SeleniumUtils.EsperaCargaPagina(driver, "id", "form-principal", 5);						//TODO: test más especifico?
     }
 	//PR04: Probar que la base de datos contiene los datos insertados con conexión correcta a la base de datos.
 	@Test
@@ -103,7 +115,7 @@ public class PlantillaSDI2_Tests1617 {
 	//PR05: Visualizar correctamente la lista de usuarios normales. 
 	@Test
     public void prueba05() {
-		assertTrue(false);
+		assertTrue(false);	
     }
 	//PR06: Cambiar el estado de un usuario de ENABLED a DISABLED. Y tratar de entrar con el usuario que se desactivado.
 	@Test
@@ -138,7 +150,19 @@ public class PlantillaSDI2_Tests1617 {
 	//PR12: Crear una cuenta de usuario normal con datos válidos.
 	@Test
     public void prueba12() {
-		assertTrue(false);
+		WebElement registro = driver.findElement(By.id("form-principal:register-button"));
+		registro.click();
+		SeleniumUtils.EsperaCargaPagina(driver, "id", "form-registro", 5);
+		
+		Map<String, String> params = new HashMap<>();
+		params.put("login", "newuser");
+		params.put("password", "newuser1");
+		params.put("repeated-password", "newuser1");
+		params.put("email", "newuser1@mail.com");
+		
+		fillForm("form-registro", "register-button", params);
+		
+		SeleniumUtils.EsperaCargaPagina(driver, "id", "form-principal", 5);						//TODO: test más especifico?
     }
 	//PR13: Crear una cuenta de usuario normal con login repetido.
 	@Test
@@ -147,7 +171,7 @@ public class PlantillaSDI2_Tests1617 {
     }
 	//PR14: Crear una cuenta de usuario normal con Email incorrecto.
 	@Test
-    public void prueba14() {
+    public void prueba14() {	//!!!\Comprobar que sale el mensaje de error y se sigue en la misma pagina
 		assertTrue(false);
     }
 	//PR15: Crear una cuenta de usuario normal con Password incorrecta.
