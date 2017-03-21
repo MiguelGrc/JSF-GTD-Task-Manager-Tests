@@ -1,5 +1,5 @@
 package com.sdi.tests.Tests;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.File;
 import java.util.HashMap;
@@ -110,42 +110,190 @@ public class PlantillaSDI2_Tests1617 {
 	//PR04: Probar que la base de datos contiene los datos insertados con conexión correcta a la base de datos.
 	@Test
     public void prueba04() {
-		assertTrue(false);
+		prueba01();
+		By boton = By.id("form-cabecera:item-restoreDB");
+		driver.findElement(boton).click();
+		
+		//AdminService aServ = Services
+		
+		assertTrue(false); //TODO miguel.
     }
 	//PR05: Visualizar correctamente la lista de usuarios normales. 
 	@Test
     public void prueba05() {
-		assertTrue(false);	
+		prueba01();
+		
+		List<WebElement> usuarios=SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
+		String[] nombreUsuarios={"user1","user2","user3"}; //TODO: Quizas completar comprobando + campos, por ahora solo nombres.
+		
+		int counter=0;
+		for(WebElement usuario:usuarios){
+			assertEquals(nombreUsuarios[counter],usuario.getText());
+			counter++;
+		}
     }
 	//PR06: Cambiar el estado de un usuario de ENABLED a DISABLED. Y tratar de entrar con el usuario que se desactivado.
 	@Test
     public void prueba06() {
-		assertTrue(false);
+		prueba01();
+		
+		//Primer clicamos en el user2 para deshabilitarlo
+		List<WebElement> usuarios = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr[2]", 2);
+		usuarios.get(0).click();
+		
+		//Lo deshabilitamos con el boton.
+		List<WebElement> botonCambiarEstado = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//button[@id='form-users:table-users:status-button']", 2);
+		botonCambiarEstado.get(0).click();
+		
+		//Comprobamos que aparece deshabilitado aqui.
+		List<WebElement> estadoUsuario = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr[2]/td[4]", 2);
+		assertEquals("Deshabilitado", estadoUsuario.get(0).getText());
+		
+		//TODO: comprobar que user2 no puede logearse(se necesita el boton log out.)
+		
     }
 	//PR07: Cambiar el estado de un usuario a DISABLED a ENABLED. Y Y tratar de entrar con el usuario que se ha activado.
 	@Test
     public void prueba07() {
-		assertTrue(false);
+		prueba01();
+		
+		//Primer clicamos en el user2 para deshabilitarlo
+				List<WebElement> usuarios = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr[2]", 2);
+				usuarios.get(0).click();
+				
+				//Lo deshabilitamos con el boton.
+				List<WebElement> botonCambiarEstado = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//button[@id='form-users:table-users:status-button']", 2);
+				botonCambiarEstado.get(0).click();
+				
+				//Comprobamos que aparece deshabilitado aqui.
+				List<WebElement> estadoUsuario = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr[2]/td[4]", 2);
+				assertEquals("Habilitado", estadoUsuario.get(0).getText());
+				
+				//TODO: comprobar que user2 PUEDE logearse(se necesita el boton log out.)
     }
 	//PR08: Ordenar por Login
 	@Test
     public void prueba08() {
-		assertTrue(false);
+		prueba01();
+		
+		//Hacemos click en la cabecera de login para ordenar por criterio
+		WebElement loginButton = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr/th[1]", 2).get(0);
+		loginButton.click();
+		
+		//Por defecto ascendente, luego el orden es:
+		String[] loginUsuariosEx = {"user1","user2","user3"};
+		List<WebElement> loginUsuariosReal=SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
+		int counter=0;
+		for(WebElement loginUsuario: loginUsuariosReal){
+			assertEquals(loginUsuariosEx[counter], loginUsuario.getText());
+			counter++;
+		}
+		
+		loginButton.click(); //Volvemos a pulsar para cambiar a orden inverso:
+		loginUsuariosReal=SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
+		counter=2; //Empezamos por el final del array
+		for(WebElement loginUsuario: loginUsuariosReal){
+			assertEquals(loginUsuariosEx[counter], loginUsuario.getText());
+			counter--;
+		}
+		
     }
 	//PR09: Ordenar por Email
 	@Test
     public void prueba09() {
-		assertTrue(false);
+		prueba01();
+		
+		//Hacemos click en la cabecera de login para ordenar por criterio
+		WebElement emailButton = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr/th[2]", 2).get(0);
+		emailButton.click();
+		
+		//Por defecto ascendente, luego el orden es:
+		String[] loginUsuariosEx = {"user1","user2","user3"};
+		List<WebElement> loginUsuariosReal=SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
+		int counter=0;
+		for(WebElement loginUsuario: loginUsuariosReal){
+			assertEquals(loginUsuariosEx[counter], loginUsuario.getText());
+			counter++;
+		}
+		
+		emailButton.click(); //Volvemos a pulsar para cambiar a orden inverso:
+		loginUsuariosReal=SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
+		counter=2; //Empezamos por el final del array
+		for(WebElement loginUsuario: loginUsuariosReal){
+			assertEquals(loginUsuariosEx[counter], loginUsuario.getText());
+			counter--;
+		}
     }
 	//PR10: Ordenar por Status
 	@Test
     public void prueba10() {
-		assertTrue(false);
+		prueba06(); //Para testear la ordenación adecuadamente, deshabilitamos el user2
+		
+		//Hacemos click en la cabecera de login para ordenar por criterio
+		WebElement statusButton = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr/th[4]", 2).get(0);
+		statusButton.click();
+		
+		///Se opta por comporobar por ambos login y enabled disabled.
+		//Por defecto ascendente, luego el orden es:
+		String[] loginUsuariosEx = {"user1","user3","user2"};
+		String[] statusUsuariosEx = {"Habilitado","Habilitado","Deshabilitado"};
+		List<WebElement> loginUsuariosReal=SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
+		List<WebElement> statusUsuariosReal=SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[4]", 2);
+		int counter=0;
+		for(WebElement loginUsuario: loginUsuariosReal){
+			assertEquals(loginUsuariosEx[counter], loginUsuario.getText());
+			assertEquals(statusUsuariosEx[counter], statusUsuariosReal.get(counter).getText());
+			counter++;
+		}
+		
+		statusButton.click(); //Volvemos a pulsar para cambiar a orden inverso:
+		String[] loginUsuariosExSecondTime = {"user3","user1","user2"}; //La posicion del user1 se mantiene siempre la más alta luego hay que declararlo de nuevo.
+		loginUsuariosReal=SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
+		statusUsuariosReal=SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[4]", 2);
+		counter=2; //Empezamos por el final del array
+		for(WebElement loginUsuario: loginUsuariosReal){
+			assertEquals(loginUsuariosExSecondTime[counter], loginUsuario.getText());
+			assertEquals(statusUsuariosEx[counter], statusUsuariosReal.get(	Math.abs(counter-2)).getText()); //TODO: quizas demasiado rebuscado y hacerlo mas claro
+			counter--;
+		}
+		
+		//Restauramos el orden previo para dejar el estado del usuario comoe staba de la prueba07
+		WebElement loginButton = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr/th[1]", 2).get(0);
+		loginButton.click();
+		
+		//Ponemos el user2 como estaba de nuevo.
+		WebElement user2 = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr[1]", 2).get(0);
+		user2.click();
+		
+		List<WebElement> botonCambiarEstado = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//button[@id='form-users:table-users:status-button']", 2);
+		botonCambiarEstado.get(0).click();
+		
+		
     }
 	//PR11: Borrar una cuenta de usuario normal y datos relacionados.
 	@Test
     public void prueba11() {
-		assertTrue(false);
+		prueba01();
+		
+		//Debe encontrarse el usuario antes de proseguir.
+		SeleniumUtils.textoPresentePagina(driver, "user3@gmail.com");
+		
+		//Borramos el user3;
+		WebElement user3 = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr[3]", 2).get(0);
+		user3.click();
+		
+		WebElement botonBorrarUsuario = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//button[contains(@id,'delete-button')]", 2).get(0);
+		botonBorrarUsuario.click();
+		
+		WebElement confirmationButton = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//button[contains(@id,'delete-yes')]", 2).get(0);
+		confirmationButton.click();
+		
+		SeleniumUtils.textoNoPresentePagina(driver, "user3@gmail.com");	
+		
+		//Restauramos su estado anterior.
+		By boton = By.id("form-cabecera:item-restoreDB");
+		driver.findElement(boton).click();
+		
     }
 	//PR12: Crear una cuenta de usuario normal con datos válidos.
 	@Test
@@ -167,7 +315,7 @@ public class PlantillaSDI2_Tests1617 {
 	//PR13: Crear una cuenta de usuario normal con login repetido.
 	@Test
     public void prueba13() {
-		assertTrue(false);
+		assertTrue(false); //TODO
     }
 	//PR14: Crear una cuenta de usuario normal con Email incorrecto.
 	@Test
@@ -314,12 +462,19 @@ public class PlantillaSDI2_Tests1617 {
 	//PR37: Intento de acceso a un  URL privado de administrador con un usuario autenticado como usuario normal.
 	@Test
     public void prueba37() {
+		//TODO: cuando miguel haga su parte.
 		assertTrue(false);
     }
 	//PR38: Intento de acceso a un  URL privado de usuario normal con un usuario no autenticado.
 	@Test
     public void prueba38() {
-		assertTrue(false);
+		prueba01(); //Nos logeamos como administrador
+		
+		//Intentamos acceder a una de las paginas de usuario
+		driver.get("http://localhost:8280/Notaneitor/user/tasks.xhtml");
+		//Te tiene que redireccionar a login
+		
+		SeleniumUtils.textoPresentePagina(driver, "Autentificación");
     }
 
 	
