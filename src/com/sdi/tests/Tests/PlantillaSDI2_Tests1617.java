@@ -142,7 +142,7 @@ public class PlantillaSDI2_Tests1617 {
     public void prueba10() {
 		assertTrue(false);
     }
-	//PR11: Borrar  una cuenta de usuario normal y datos relacionados.
+	//PR11: Borrar una cuenta de usuario normal y datos relacionados.
 	@Test
     public void prueba11() {
 		assertTrue(false);
@@ -172,12 +172,38 @@ public class PlantillaSDI2_Tests1617 {
 	//PR14: Crear una cuenta de usuario normal con Email incorrecto.
 	@Test
     public void prueba14() {	//!!!\Comprobar que sale el mensaje de error y se sigue en la misma pagina
-		assertTrue(false);
+		WebElement registro = driver.findElement(By.id("form-principal:register-button"));
+		registro.click();
+		SeleniumUtils.EsperaCargaPagina(driver, "id", "form-registro", 5);
+		
+		Map<String, String> params = new HashMap<>();
+		params.put("login", "newuser");
+		params.put("password", "newuser1");
+		params.put("repeated-password", "newuser1");
+		params.put("email", "mailFail");
+		
+		fillForm("form-registro", "register-button", params);
+		
+		SeleniumUtils.EsperaCargaPagina(driver, "id", "form-registro", 5);
+		SeleniumUtils.textoPresentePagina(driver, "El email no es válido");
     }
 	//PR15: Crear una cuenta de usuario normal con Password incorrecta.
 	@Test
     public void prueba15() {
-		assertTrue(false);
+		WebElement registro = driver.findElement(By.id("form-principal:register-button"));
+		registro.click();
+		SeleniumUtils.EsperaCargaPagina(driver, "id", "form-registro", 5);
+		
+		Map<String, String> params = new HashMap<>();
+		params.put("login", "newuser");
+		params.put("password", "new");
+		params.put("repeated-password", "new");
+		params.put("email", "newuser1@mail.com");
+		
+		fillForm("form-registro", "register-button", params);
+		
+		SeleniumUtils.EsperaCargaPagina(driver, "id", "form-registro", 5);
+		SeleniumUtils.textoPresentePagina(driver, "La contraseña debe contener al menos 8 letras y números");
     }
 	//USUARIO
 	//PR16: Comprobar que en Inbox sólo aparecen listadas las tareas sin categoría y que son las que tienen que. Usar paginación navegando por las tres páginas.
