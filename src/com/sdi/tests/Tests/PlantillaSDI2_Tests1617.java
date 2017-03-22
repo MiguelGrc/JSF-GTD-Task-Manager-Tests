@@ -150,6 +150,17 @@ public class PlantillaSDI2_Tests1617 {
 		assertEquals("Deshabilitado", estadoUsuario.get(0).getText());
 		
 		//TODO: comprobar que user2 no puede logearse(se necesita el boton log out.)
+		WebElement botonCerrarSesión = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//a[contains(@id,'item-cerrarSesion')]", 2).get(0);
+		botonCerrarSesión.click();
+		
+		Map<String, String> params = new HashMap<>();
+		params.put("login", "user2");
+		params.put("password", "user2");
+		
+		fillForm("form-principal", "login-button", params);
+		
+		SeleniumUtils.textoPresentePagina(driver, "Autentificación"); //Mejor otro tipo de via, TODO el nuevo mensaje para decir que no se puede.
+		
 		
     }
 	//PR07: Cambiar el estado de un usuario a DISABLED a ENABLED. Y Y tratar de entrar con el usuario que se ha activado.
@@ -170,6 +181,16 @@ public class PlantillaSDI2_Tests1617 {
 				assertEquals("Habilitado", estadoUsuario.get(0).getText());
 				
 				//TODO: comprobar que user2 PUEDE logearse(se necesita el boton log out.)
+				WebElement botonCerrarSesión = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//a[contains(@id,'item-cerrarSesion')]", 2).get(0);
+				botonCerrarSesión.click();
+				
+				Map<String, String> params = new HashMap<>();
+				params.put("login", "user2");
+				params.put("password", "user2");
+				
+				fillForm("form-principal", "login-button", params);
+				
+				SeleniumUtils.textoPresentePagina(driver, "Autentificación"); 
     }
 	//PR08: Ordenar por Login
 	@Test
@@ -227,8 +248,19 @@ public class PlantillaSDI2_Tests1617 {
 	//PR10: Ordenar por Status
 	@Test
     public void prueba10() {
-		prueba06(); //Para testear la ordenación adecuadamente, deshabilitamos el user2
+		prueba01();
+	
+		//Primer clicamos en el user2 para deshabilitarlo
+		List<WebElement> usuarios = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr[2]", 2);
+		usuarios.get(0).click();
 		
+		//Lo deshabilitamos con el boton.
+		List<WebElement> botonCambiarEstado = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//button[@id='form-users:table-users:status-button']", 2);
+		botonCambiarEstado.get(0).click();
+		
+		//Comprobamos que aparece deshabilitado aqui.
+		List<WebElement> estadoUsuario = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr[2]/td[4]", 2);
+		assertEquals("Habilitado", estadoUsuario.get(0).getText());	
 		//Hacemos click en la cabecera de login para ordenar por criterio
 		WebElement statusButton = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr/th[4]", 2).get(0);
 		statusButton.click();
@@ -257,7 +289,7 @@ public class PlantillaSDI2_Tests1617 {
 			counter--;
 		}
 		
-		//Restauramos el orden previo para dejar el estado del usuario comoe staba de la prueba07
+		//Restauramos el orden previo para dejar el estado del usuario comoe estaba de la prueba07
 		WebElement loginButton = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr/th[1]", 2).get(0);
 		loginButton.click();
 		
@@ -265,8 +297,10 @@ public class PlantillaSDI2_Tests1617 {
 		WebElement user2 = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr[1]", 2).get(0);
 		user2.click();
 		
-		List<WebElement> botonCambiarEstado = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//button[@id='form-users:table-users:status-button']", 2);
-		botonCambiarEstado.get(0).click();
+		List<WebElement> botonCambiarEstadoAfter = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//button[@id='form-users:table-users:status-button']", 2);
+		botonCambiarEstadoAfter.get(0).click();
+		
+		
 		
 		
     }
@@ -442,7 +476,15 @@ public class PlantillaSDI2_Tests1617 {
 	//PR33: Salir de sesión desde cuenta de administrador.
 	@Test
     public void prueba33() {
-		assertTrue(false);
+		prueba01();
+		
+		//Hacemos click en el boton de cerrar sesión.
+		WebElement botonCerrarSesión = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//a[contains(@id,'item-cerrarSesion')]", 2).get(0);
+		botonCerrarSesión.click();
+		
+		//Comrpobamos que estamos en la página de login.
+		SeleniumUtils.textoPresentePagina(driver, "Autentificación"); 
+		
     }
 	//PR34: Salir de sesión desde cuenta de usuario normal.
 	@Test
