@@ -2,9 +2,13 @@ package com.sdi.tests.Tests;
 import static org.junit.Assert.*;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.After;
 import org.junit.Before;
@@ -12,12 +16,25 @@ import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 import org.openqa.selenium.By;
+import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.firefox.FirefoxBinary;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxProfile;
 
+import alb.util.date.DateUtil;
+
+import com.google.common.collect.Lists;
+import com.sdi.business.AdminService;
+import com.sdi.business.Services;
+import com.sdi.business.TaskService;
+import com.sdi.business.exception.BusinessException;
+import com.sdi.comparator.TaskComparator;
+import com.sdi.dto.Category;
+import com.sdi.dto.Task;
+import com.sdi.dto.User;
+import com.sdi.persistence.impl.TaskDaoJdbcImpl;
 import com.sdi.tests.utils.SeleniumUtils;
 
 //Ordenamos las pruebas por el nombre del método
@@ -71,6 +88,21 @@ public class PlantillaSDI2_Tests1617 {
 		By boton = By.id(formID + ":" + buttonID);
 		driver.findElement(boton).click();	
 	}
+	
+	private void loginUser(){
+		Map<String, String> params = new HashMap<>();
+		params.put("login", "user1");
+		params.put("password", "user1");
+		
+		fillForm("form-principal", "login-button", params);
+	}
+	private void loginAdmin(){
+		Map<String, String> params = new HashMap<>();
+		params.put("login", "admin1");
+		params.put("password", "admin1");
+		
+		fillForm("form-principal", "login-button", params);
+	}
 
 	//PRUEBAS
 	//ADMINISTRADOR
@@ -109,19 +141,152 @@ public class PlantillaSDI2_Tests1617 {
     }
 	//PR04: Probar que la base de datos contiene los datos insertados con conexión correcta a la base de datos.
 	@Test
-    public void prueba04() {
+    public void prueba04() throws BusinessException {
 		prueba01();
 		By boton = By.id("form-cabecera:item-restoreDB");
 		driver.findElement(boton).click();
 		
-		//AdminService aServ = Services
+		//USUARIOS
+		AdminService aServ = Services.getAdminService();
 		
-		assertTrue(false); //TODO miguel.
+		List<User> expectedUsers= new ArrayList<User>();
+		
+		expectedUsers.add(new User().setId(new Long(4)).setLogin("admin1").setPassword("admin1")
+				.setEmail("admin1@gmail.com").setIsAdmin(true));
+		
+		for(int i=1; i<=3;i++){
+			expectedUsers.add(new User().setLogin("user"+i).setPassword("user"+i).setEmail("user"+i+"@gmail.com"));
+		}
+		
+		
+		List<User> users = aServ.findAllUsers();
+		
+		int counter=0;
+		for(User u: users){
+			//Copiando las ids ya que se generan dinamicamente.
+			User expectedUser = expectedUsers.get(counter);
+			expectedUser.setId(u.getId());
+			assertEquals(expectedUser, u);
+			counter++;
+		}
+		
+		//CATEGORIAS
+		
+		TaskService tServ = Services.getTaskService();
+		
+		List<Category> expectedCategories = new ArrayList<Category>();
+		
+		counter=0;
+		for (User u : users) {
+			if (!u.getIsAdmin()) {
+				for (int i = 1; i <= 3; i++) {
+					Category categ = new Category();
+					expectedCategories.add(categ.setId(new Long(counter))
+							.setUserId(u.getId())
+							.setName("Category" + counter));
+					expectedCategories.add(categ);
+					counter++;
+				}
+			}
+		}
+		
+		List<Category> categories = new ArrayList<Category>();
+		//Cogemos todas las tareas
+		for(User u: users){
+			categories.addAll(tServ.findCategoriesByUserId(u.getId()));
+		}
+		
+		counter=0;
+		for(Category c: categories){
+			//Copiando las ids ya que se generan dinamicamente.
+			Category expectedCategory = categories.get(counter);
+			expectedCategory.setId(c.getId());
+			assertEquals(expectedCategory,c);
+			counter++;
+		}
+		
+		//TAREAS
+		List<Task> expectedTasks = new ArrayList<Task>();
+		
+		counter = 1;
+		for (User u : users) {
+			if (!u.getIsAdmin()) {
+				
+				List<Category> categoriasUsuario = tServ
+						.findCategoriesByUserId(u.getId());
+				for (int i = 1; i <= 10; i++) {
+					Task tarea = new Task();
+					expectedTasks.add(tarea
+							.setPlanned(
+									DateUtil.addDays(DateUtil.today(), 6))
+							.setId(new Long(counter)).setTitle("Tarea" + counter)
+							.setUserId(u.getId()));
+					counter++;
+				}
+				for (int i = 1; i <= 10; i++) {
+					Task tarea = new Task();
+					expectedTasks.add(tarea.setPlanned(DateUtil.today())
+							.setId(new Long(counter)).setTitle("Tarea" + counter)
+							.setUserId(u.getId()));
+					counter++;
+				}
+				for (int i = 1; i <= 10; i++) {
+					Task tarea = new Task();
+					Category categ = null;
+					if (i <= 3) {
+						categ = categoriasUsuario.get(0);
+					} else {
+						if (i <= 6) {
+							categ = categoriasUsuario.get(1);
+						} else {
+							if (i <= 10) {
+								categ = categoriasUsuario.get(2);
+							}
+						}
+
+					}
+
+					expectedTasks.add(tarea
+							.setPlanned(DateUtil.addDays(DateUtil.today(), -counter))
+							.setId(new Long(counter)).setTitle("Tarea" + counter)
+							.setUserId(u.getId())
+							.setCategoryId(categ.getId()));
+					counter++;
+				}
+			
+			}
+		}
+		
+		//Fueron introducidas en desorden, debemos ordenarlas, como sabemos a priori
+		//el formato de las tareas de pruebas(task+nº) podemos comparar por ese titulo.
+		Collections.sort(expectedTasks, new TaskComparator());
+		
+		TaskDaoJdbcImpl tDao = new TaskDaoJdbcImpl();
+		List<Task> tasks = new ArrayList<Task>();
+
+		//Cogemos todas las tareas que existen en la base de datos.
+		tasks.addAll(tDao.findAll());
+		
+		//Tambien ordenamos estas:
+		Collections.sort(tasks, new TaskComparator());
+		
+		counter=0;
+		for(Task t: tasks){
+			//Copiando las ids ya que se generan dinamicamente.
+			Task expectedTask = expectedTasks.get(counter);
+			expectedTask.setId(t.getId());
+			assertEquals(expectedTask,t);
+			counter++;
+			
+		}
+		
+		
+		
     }
 	//PR05: Visualizar correctamente la lista de usuarios normales. 
 	@Test
     public void prueba05() {
-		prueba01();
+		loginAdmin();
 		
 		List<WebElement> usuarios=SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
 		String[] nombreUsuarios={"user1","user2","user3"}; //TODO: Quizas completar comprobando + campos, por ahora solo nombres.
@@ -135,7 +300,7 @@ public class PlantillaSDI2_Tests1617 {
 	//PR06: Cambiar el estado de un usuario de ENABLED a DISABLED. Y tratar de entrar con el usuario que se desactivado.
 	@Test
     public void prueba06() {
-		prueba01();
+		loginAdmin();
 		
 		//Primer clicamos en el user2 para deshabilitarlo
 		List<WebElement> usuarios = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr[2]", 2);
@@ -165,8 +330,8 @@ public class PlantillaSDI2_Tests1617 {
     }
 	//PR07: Cambiar el estado de un usuario a DISABLED a ENABLED. Y Y tratar de entrar con el usuario que se ha activado.
 	@Test
-    public void prueba07() {
-		prueba01();
+    public void prueba07() throws InterruptedException {
+		loginAdmin();
 		
 		//Primer clicamos en el user2 para deshabilitarlo
 				List<WebElement> usuarios = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr[2]", 2);
@@ -190,13 +355,14 @@ public class PlantillaSDI2_Tests1617 {
 				
 				fillForm("form-principal", "login-button", params);
 				
-				//TODO algo de la nueva pagina de tareas.
-				SeleniumUtils.textoPresentePagina(driver, "Autentificación"); 
+				//Hay que esperar a que se cargue
+				Thread.sleep(1000);
+				SeleniumUtils.textoPresentePagina(driver, "Listado de tareas"); 
     }
 	//PR08: Ordenar por Login
 	@Test
     public void prueba08() {
-		prueba01();
+		loginAdmin();
 		
 		//Hacemos click en la cabecera de login para ordenar por criterio
 		WebElement loginButton = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr/th[1]", 2).get(0);
@@ -223,7 +389,7 @@ public class PlantillaSDI2_Tests1617 {
 	//PR09: Ordenar por Email
 	@Test
     public void prueba09() {
-		prueba01();
+		loginAdmin();
 		
 		//Hacemos click en la cabecera de login para ordenar por criterio
 		WebElement emailButton = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr/th[2]", 2).get(0);
@@ -249,7 +415,7 @@ public class PlantillaSDI2_Tests1617 {
 	//PR10: Ordenar por Status
 	@Test
     public void prueba10() {
-		prueba01();
+		loginAdmin();
 	
 		//Primer clicamos en el user2 para deshabilitarlo
 		List<WebElement> usuarios = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr[2]", 2);
@@ -261,7 +427,7 @@ public class PlantillaSDI2_Tests1617 {
 		
 		//Comprobamos que aparece deshabilitado aqui.
 		List<WebElement> estadoUsuario = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr[2]/td[4]", 2);
-		assertEquals("Habilitado", estadoUsuario.get(0).getText());	
+		assertEquals("Deshabilitado", estadoUsuario.get(0).getText());	
 		//Hacemos click en la cabecera de login para ordenar por criterio
 		WebElement statusButton = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr/th[4]", 2).get(0);
 		statusButton.click();
@@ -307,9 +473,10 @@ public class PlantillaSDI2_Tests1617 {
     }
 	//PR11: Borrar una cuenta de usuario normal y datos relacionados.
 	@Test
-    public void prueba11() {
-		prueba01();
-		
+    public void prueba11() throws InterruptedException {
+		loginAdmin();
+		//Necesitamos esperar un poco.
+		Thread.sleep(500);
 		//Debe encontrarse el usuario antes de proseguir.
 		SeleniumUtils.textoPresentePagina(driver, "user3@gmail.com");
 		
@@ -350,7 +517,20 @@ public class PlantillaSDI2_Tests1617 {
 	//PR13: Crear una cuenta de usuario normal con login repetido.
 	@Test
     public void prueba13() {
-		assertTrue(false); //TODO
+		WebElement registro = driver.findElement(By.id("form-principal:register-button"));
+		registro.click();
+		SeleniumUtils.EsperaCargaPagina(driver, "id", "form-registro", 5);
+		
+		Map<String, String> params = new HashMap<>();
+		params.put("login", "user1");
+		params.put("password", "PasswordPrueba1");
+		params.put("repeated-password", "PasswordPrueba1");
+		params.put("email", "EstoVaAFallar@gmail.com");
+		
+		fillForm("form-registro", "register-button", params);
+		
+		SeleniumUtils.EsperaCargaPagina(driver, "id", "form-registro", 5);
+		SeleniumUtils.textoPresentePagina(driver, "Ya existe un usuario con este nombre");
     }
 	//PR14: Crear una cuenta de usuario normal con Email incorrecto.
 	@Test
@@ -392,7 +572,65 @@ public class PlantillaSDI2_Tests1617 {
 	//PR16: Comprobar que en Inbox sólo aparecen listadas las tareas sin categoría y que son las que tienen que. Usar paginación navegando por las tres páginas.
 	@Test
     public void prueba16() {
-		assertTrue(false);
+		loginUser();
+		//Las tareas Inbox correspondientes al usuario1
+		Map<String,String[]> inboxTasksRetrasadas = new HashMap<String,String[]>();
+		//Primero añadimos las que tienen fecha planeada más atrasada(aparecen así por defecto) tareas de la 11 a la 20
+		for(int i=11;i<=20;i++){
+			String[] datosAMirar = {"Tarea"+i,DateUtil.today().toString(),DateUtil.today().toString()};
+			inboxTasksRetrasadas.put("Tarea"+i, datosAMirar);
+		}
+		Map<String,String[]> inboxTasks = new HashMap<String,String[]>();
+		//A continuación las que no estan retrasadas 1-10
+		for(int i=1;i<=10;i++){
+			String[] datosAMirar = {"Tarea"+i,DateUtil.today().toString(),DateUtil.addDays(DateUtil.today(), 6).toString()};
+			inboxTasks.put("Tarea"+i,datosAMirar);
+		}
+		int rowCount=1;
+		//Cogemos todas las tareas
+		for(int i=1;i<=20;i++){
+			if(i==9){
+				//Debemos pasar a la sigueinte página.
+				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[2]", 2).get(0);
+				page.click();
+				rowCount=1;
+			}
+			if(i==17){
+				//Debemos pasar a la sigueinte página.
+				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[3]", 2).get(0);
+				page.click();
+				rowCount=1;
+			}
+			String nombre ="";
+			String creacion="";
+			String planeada="";
+			
+			int attempts =0;
+			while(attempts <2){
+				try{
+					nombre = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr["+rowCount+"]/td[1]", 2).get(0).getText();
+					creacion = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr["+rowCount+"]/td[2]", 2).get(0).getText();
+					planeada = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr["+rowCount+"]/td[3]", 2).get(0).getText();
+				}catch(StaleElementReferenceException e){
+					
+				}
+				attempts++;
+			}
+			
+			
+			String[] parsedTask = {nombre,creacion,planeada};
+			if(i<=10){
+				//Las 20 primeras retrasadas
+				//Tenemos que tener en cuenta que el orden no es fijo, usamos el mapa
+				assertArrayEquals(inboxTasksRetrasadas.get(parsedTask[0]),parsedTask);
+			}
+			else{
+				//Las 10 ultimas no retrasadas
+				assertArrayEquals(inboxTasks.get(parsedTask[0]),parsedTask);
+			}
+			rowCount++;
+		}
+		
     }
 	//PR17: Funcionamiento correcto de la ordenación por fecha planeada.
 	@Test
@@ -401,33 +639,87 @@ public class PlantillaSDI2_Tests1617 {
     }
 	//PR18: Funcionamiento correcto del filtrado.
 	@Test
-    public void prueba18() {
-		assertTrue(false);
+    public void prueba18() throws InterruptedException {
+		loginUser();
+		//Cogemos el input del filtro e introducimos el filtrado
+		WebElement inputFiltroTitulo = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr/th[1]/input", 2).get(0);
+		inputFiltroTitulo.sendKeys("tarea2");
+		//Ahora Las tareas esperadas son
+		String[] template = {"Tarea20","Tarea2"};
+		List<String> tareasEsperadas = new ArrayList<String>(Arrays.asList(template));
+		//Y las que se muestran en realidad
+		//Debemos esperar para que el filtrado acabe.
+		Thread.sleep(1000);
+		List<WebElement> tareas = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
+		for(int i=0;i<tareas.size();i++){
+			assertTrue(tareasEsperadas.contains(tareas.get(i).getText()));
+		}
+		
+		//TODO: si arreglado mirar si se puede.
+		
+//		inputFiltroTitulo.clear();
+//		inputFiltroTitulo.sendKeys("tarea1");
+//		
+//		String[] tareasEsperadas2 = {"Tarea11",""}
     }
 	//PR19: Funcionamiento correcto de la ordenación por categoría.
 	@Test
     public void prueba19() {
-		assertTrue(false);
+		assertTrue(false); //Se puede
     }
 	//PR20: Funcionamiento correcto de la ordenación por fecha planeada.
 	@Test
-    public void prueba20() {
-		assertTrue(false);
+    public void prueba20() throws InterruptedException {
+		loginUser();
+		//Nos dirigimos al listado de tareas de hoy
+		WebElement botonHoy = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//a[contains(@id,'tareas-hoy')]", 2).get(0);
+		botonHoy.click();
+		//ordenamos por fecha
+		WebElement botonFechaPlaneada = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr/th[3]", 2).get(0);
+		botonFechaPlaneada.click();
+		//Creamos las fechas esperadas
+		List<String> fechasEsperadas = new ArrayList<String>();
+		for(int i=1;i<=20;i++){
+			if(i<=10){
+				fechasEsperadas.add(DateUtil.addDays(DateUtil.today(), i-31).toString());
+			}
+			else{
+				fechasEsperadas.add(DateUtil.today().toString());
+			}
+		}
+		
+		//Cogemos los elementos reales
+		List<WebElement> fechasPlaneadas = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[3]", 2);
+		for(int i=0;i<20;i++){
+			if(i==8){
+				//Debemos pasar a la sigueinte página.
+				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[2]", 2).get(0);
+				page.click();
+				fechasPlaneadas = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[3]", 2);
+			}
+			if(i==16){
+				//Debemos pasar a la sigueinte página.
+				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[3]", 2).get(0);
+				page.click();
+				fechasPlaneadas = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[3]", 2);
+			}
+			assertEquals(fechasEsperadas.get(i),fechasPlaneadas.get(i%8).getText());
+		}
     }
 	//PR21: Comprobar que las tareas que no están en rojo son las de hoy y además las que deben ser.
 	@Test
     public void prueba21() {
-		assertTrue(false);
+		assertTrue(false); //Se puede
     }
 	//PR22: Comprobar que las tareas retrasadas están en rojo y son las que deben ser.
 	@Test
     public void prueba22() {
-		assertTrue(false);
+		assertTrue(false); //Se puede
     }
 	//PR23: Comprobar que las tareas de hoy y futuras no están en rojo y que son las que deben ser.
 	@Test
     public void prueba23() {
-		assertTrue(false);
+		assertTrue(false); //Se puede
     }
 	//PR24: Funcionamiento correcto de la ordenación por día.
 	@Test
@@ -437,7 +729,7 @@ public class PlantillaSDI2_Tests1617 {
 	//PR25: Funcionamiento correcto de la ordenación por nombre.
 	@Test
     public void prueba25() {
-		assertTrue(false);
+		assertTrue(false);//Se puede
     }
 	//PR26: Confirmar una tarea, inhabilitar el filtro de tareas terminadas, ir a la pagina donde está la tarea terminada y comprobar que se muestra. 
 	@Test
@@ -490,12 +782,12 @@ public class PlantillaSDI2_Tests1617 {
 	//PR34: Salir de sesión desde cuenta de usuario normal.
 	@Test
     public void prueba34() {
-		assertTrue(false);
+		assertTrue(false); //Se puede
     }
 	//PR35: Cambio del idioma por defecto a un segundo idioma. (Probar algunas vistas)
 	@Test
     public void prueba35() {
-		assertTrue(false);
+		assertTrue(false); //Se puede
     }
 	//PR36: Cambio del idioma por defecto a un segundo idioma y vuelta al idioma por defecto. (Probar algunas vistas)
 	@Test
@@ -506,7 +798,7 @@ public class PlantillaSDI2_Tests1617 {
 	@Test
     public void prueba37() {
 		//TODO: cuando miguel haga su parte.
-		assertTrue(false);
+		assertTrue(false); //Se puede
     }
 	//PR38: Intento de acceso a un  URL privado de usuario normal con un usuario no autenticado.
 	@Test
