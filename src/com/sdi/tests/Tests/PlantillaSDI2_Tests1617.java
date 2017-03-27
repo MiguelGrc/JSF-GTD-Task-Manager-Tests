@@ -285,7 +285,7 @@ public class PlantillaSDI2_Tests1617 {
     }
 	//PR05: Visualizar correctamente la lista de usuarios normales. 
 	@Test
-    public void prueba05() {
+    public void prueba05() throws InterruptedException {
 		loginAdmin();
 		
 		List<WebElement> usuarios=SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
@@ -293,6 +293,7 @@ public class PlantillaSDI2_Tests1617 {
 		
 		int counter=0;
 		for(WebElement usuario:usuarios){
+			Thread.sleep(500);
 			assertEquals(nombreUsuarios[counter],usuario.getText());
 			counter++;
 		}
@@ -414,10 +415,11 @@ public class PlantillaSDI2_Tests1617 {
     }
 	//PR10: Ordenar por Status
 	@Test
-    public void prueba10() {
+    public void prueba10() throws InterruptedException {
 		loginAdmin();
 	
 		//Primer clicamos en el user2 para deshabilitarlo
+		Thread.sleep(500);
 		List<WebElement> usuarios = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr[2]", 2);
 		usuarios.get(0).click();
 		
@@ -573,7 +575,7 @@ public class PlantillaSDI2_Tests1617 {
 	@Test
     public void prueba16() {
 		loginUser();
-		//Las tareas Inbox correspondientes al usuario1
+		//Las tareas Inbox correspondientes al usuario1 (sin categoria) son de la 1 a la 20 (20-30 con categoria)
 		Map<String,String[]> inboxTasksRetrasadas = new HashMap<String,String[]>();
 		//Primero añadimos las que tienen fecha planeada más atrasada(aparecen así por defecto) tareas de la 11 a la 20
 		for(int i=11;i<=20;i++){
@@ -642,7 +644,7 @@ public class PlantillaSDI2_Tests1617 {
     public void prueba18() throws InterruptedException {
 		loginUser();
 		//Cogemos el input del filtro e introducimos el filtrado
-		WebElement inputFiltroTitulo = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr/th[1]/input", 2).get(0);
+		WebElement inputFiltroTitulo = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/thead/tr/th[1]/input", 2).get(0);
 		inputFiltroTitulo.sendKeys("tarea2");
 		//Ahora Las tareas esperadas son
 		String[] template = {"Tarea20","Tarea2"};
@@ -650,7 +652,7 @@ public class PlantillaSDI2_Tests1617 {
 		//Y las que se muestran en realidad
 		//Debemos esperar para que el filtrado acabe.
 		Thread.sleep(1000);
-		List<WebElement> tareas = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
+		List<WebElement> tareas = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr/td[1]", 2);
 		for(int i=0;i<tareas.size();i++){
 			assertTrue(tareasEsperadas.contains(tareas.get(i).getText()));
 		}
@@ -709,27 +711,294 @@ public class PlantillaSDI2_Tests1617 {
 	//PR21: Comprobar que las tareas que no están en rojo son las de hoy y además las que deben ser.
 	@Test
     public void prueba21() {
-		assertTrue(false); //Se puede
+		loginUser();
+		
+		//Nos dirigimos al listado de tareas de hoy
+		WebElement botonHoy = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//a[contains(@id,'tareas-hoy')]", 2).get(0);
+		botonHoy.click();
+		
+		//ordenamos por fecha ya que sabemos a priori que tareas son als que estan retrasadas y evitamos paginar de mas.
+		WebElement botonFechaPlaneada = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr/th[3]", 2).get(0);
+		botonFechaPlaneada.click();
+		
+		//Introducimos las tareas no retrasadas que son las sonde hoy 11-20
+		Map<String, String> tareasEsperadas = new HashMap<String,String>();
+		for(int i=11;i<=20;i++){
+			tareasEsperadas.put("Tarea"+i, DateUtil.today().toString());
+		}
+		
+		//Primera Página
+		List<WebElement> nombresRetrasadas = null; 
+		List<WebElement> planeadaRetrasada = null; 
+		
+		int attempts =0;
+		while(attempts <2){
+			try{
+				nombresRetrasadas = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[!(contains(@class,'delay'))]/td[1]", 2);
+				planeadaRetrasada = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[!(contains(@class,'delay'))]/td[3]", 2);
+			}catch(StaleElementReferenceException e){
+				
+			}
+			attempts++;
+		}
+		
+		for(int i=0;i<nombresRetrasadas.size();i++){
+			String fechaPlaneada = tareasEsperadas.get(nombresRetrasadas.get(i).toString());
+			assertTrue(fechaPlaneada==null);
+			assertEquals(fechaPlaneada,planeadaRetrasada.get(i).getText());
+		}
+		
+		//Segunda pagina
+		WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[2]", 2).get(0);
+		page.click();
+		
+		attempts =0;
+		while(attempts <2){
+			try{
+				nombresRetrasadas = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[not(contains(@class,'delay'))]/td[1]", 2);
+				planeadaRetrasada = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[not(contains(@class,'delay'))]/td[3]", 2);
+			}catch(StaleElementReferenceException e){
+				
+			}
+			attempts++;
+		}
+		
+		for(int i=0;i<nombresRetrasadas.size();i++){
+			String fechaPlaneada = tareasEsperadas.get(nombresRetrasadas.get(i).toString());
+			assertTrue(fechaPlaneada==null);
+			assertEquals(fechaPlaneada,planeadaRetrasada.get(i).getText());
+		}
+		
     }
 	//PR22: Comprobar que las tareas retrasadas están en rojo y son las que deben ser.
 	@Test
     public void prueba22() {
-		assertTrue(false); //Se puede
+		loginUser();
+		
+		//Nos dirigimos al listado de tareas de hoy
+		WebElement botonHoy = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//a[contains(@id,'tareas-hoy')]", 2).get(0);
+		botonHoy.click();
+		
+		//ordenamos por fecha ya que sabemos a priori que tareas son als que no estan retrasadas y evitamos paginar de mas.
+		WebElement botonFechaPlaneada = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr/th[3]", 2).get(0);
+		botonFechaPlaneada.click();
+		//Introducimos las tareas no retrasadas que son las sonde hoy 1-10
+		List<String> tareasEsperadas = new ArrayList<String>();
+		for(int i=21;i<=30;i++){
+			tareasEsperadas.add("Tarea"+i);
+		}
+		
+		//Primera Página
+		List<WebElement> nombresNoRetrasadas = null; 
+		
+		int attempts =0;
+		while(attempts <2){
+			try{
+				nombresNoRetrasadas = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[contains(@class,'delay')]/td[1]", 2);
+			}catch(StaleElementReferenceException e){
+				
+			}
+			attempts++;
+		}
+		
+		for(int i=0;i<nombresNoRetrasadas.size();i++){
+			assertTrue(tareasEsperadas.contains(nombresNoRetrasadas.get(i).getText()));
+		}
+		
+		//Segunda pagina
+		WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[2]", 2).get(0);
+		page.click();
+		
+		attempts =0;
+		while(attempts <2){
+			try{
+				nombresNoRetrasadas = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[contains(@class,'delay')]/td[1]", 2);
+			}catch(StaleElementReferenceException e){
+				
+			}
+			attempts++;
+		}
+		
+		for(int i=0;i<nombresNoRetrasadas.size();i++){
+			assertTrue(tareasEsperadas.contains(nombresNoRetrasadas.get(i).getText()));
+		}
     }
 	//PR23: Comprobar que las tareas de hoy y futuras no están en rojo y que son las que deben ser.
 	@Test
     public void prueba23() {
-		assertTrue(false); //Se puede
+		loginUser();
+		
+		//Nos dirigimos al listado de tareas de semana
+		WebElement botonHoy = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//a[contains(@id,'tareas-semana')]", 2).get(0);
+		botonHoy.click();
+		
+		//Sabemos las tareas que no estan retrasadas con su fecha
+		Map<String,String> tareasNoRetrasadas = new HashMap<String,String>();
+		for(int i=1;i<=20;i++){
+			if(i<=10) // del 1-10 son futuras
+				tareasNoRetrasadas.put("Tarea"+i, DateUtil.addDays(DateUtil.today(), 6).toString());
+			else //Las de hoy
+				tareasNoRetrasadas.put("Tarea"+i, DateUtil.today().toString());
+		}
+		
+		int rowCount=1;
+		//Cogemos todas las tareas
+		for(int i=1;i<=20;i++){
+			if(i==9){
+				//Debemos pasar a la sigueinte página.
+				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[2]", 2).get(0);
+				page.click();
+				rowCount=1;
+			}
+			if(i==17){
+				//Debemos pasar a la sigueinte página.
+				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[3]", 2).get(0);
+				page.click();
+				rowCount=1;
+			}
+			String nombre ="";
+			String planeada="";
+			
+			int attempts =0;
+			while(attempts <2){
+				try{
+					nombre = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[!(contains(@class,'delay'))]/td[1]",2).get(0).toString();
+					planeada = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[!(contains(@class,'delay'))]/td[3]", 2).get(0).getText();
+				}catch(StaleElementReferenceException e){
+					
+				}
+				attempts++;
+			}
+			
+			String planeadaEsperada = tareasNoRetrasadas.get(nombre);
+			assertTrue(planeadaEsperada!=null);
+			assertEquals(planeadaEsperada,planeada);
+			rowCount++;
+		}
     }
 	//PR24: Funcionamiento correcto de la ordenación por día.
 	@Test
     public void prueba24() {
-		assertTrue(false);
+		loginUser();
+		//Nos dirigimos al listado de tareas de semana
+		WebElement botonSemana = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//a[contains(@id,'tareas-semana')]", 2).get(0);
+		botonSemana.click();
+		//ordenamos por fecha
+		WebElement botonFechaPlaneada = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr/th[3]", 2).get(0);
+		botonFechaPlaneada.click();
+		
+		int rowCount=1;
+		for(int i=0;i<30;i++){
+			if(i==8){
+				//Debemos pasar a la sigueinte página.
+				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[2]", 2).get(0);
+				page.click();
+				rowCount=1;
+			}
+			if(i==16){
+				//Siguiente página
+				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[3]", 2).get(0);
+				page.click();
+				rowCount=1;
+			}
+			if(i==24){
+				//Siguiente página
+				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[4]", 2).get(0);
+				page.click();
+				rowCount=1;
+			}
+			
+			//Cogemos la fecha planeada que corresponde.
+			String planeada="";
+			int attempts =0;
+			while(attempts <2){
+				try{
+					planeada = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr["+rowCount+"]/td[3]", 2).get(0).getText();
+				}catch(StaleElementReferenceException e){
+					
+				}
+				attempts++;
+			}
+			
+			
+			if(i<=9){
+				//Retrasadas categoria.
+				assertEquals(DateUtil.addDays(DateUtil.today(), (i-30)).toString(),planeada);
+			}
+			else if (i<=19){
+				//Hoy
+				assertEquals(DateUtil.today().toString(),planeada);
+			}
+			else{
+				//Futuro, 6 dias
+				assertEquals(DateUtil.addDays(DateUtil.today(), 6).toString(),planeada);
+			}
+			rowCount++;
+		}
+		
     }
 	//PR25: Funcionamiento correcto de la ordenación por nombre.
 	@Test
     public void prueba25() {
-		assertTrue(false);//Se puede
+		loginUser();
+		//Nos dirigimos al listado de tareas de semana
+		WebElement botonSemana = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//a[contains(@id,'tareas-semana')]", 2).get(0);
+		botonSemana.click();
+		//ordenamos por fecha
+		WebElement botonTitulo= SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr/th[1]/span", 2).get(0);
+		botonTitulo.click();
+		
+		//Las tareas se ordenan por el nombre de modo que-> Tarea1, tarea10,...
+		List<String> nombresEsperados = new ArrayList<String>();
+		for(int i=1;i<=2;i++){
+			nombresEsperados.add("Tarea"+i);
+			for(int j=0;j<=9;j++){
+				nombresEsperados.add(("Tarea"+i)+j);
+			}
+		}
+		nombresEsperados.add("Tarea3");
+		nombresEsperados.add("Tarea30");
+		for(int i=4;i<=9;i++)
+			nombresEsperados.add("Tarea"+i);
+		
+		
+		int rowCount=1;
+		//Cogemos todas las tareas
+		for(int i=0;i<30;i++){
+			if(i==8){
+				//Debemos pasar a la sigueinte página.
+				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[2]", 2).get(0);
+				page.click();
+				rowCount=1;
+			}
+			if(i==16){
+				//Debemos pasar a la sigueinte página.
+				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[3]", 2).get(0);
+				page.click();
+				rowCount=1;
+			}
+			if(i==24){
+				//Debemos pasar a la sigueinte página.
+				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[4]", 2).get(0);
+				page.click();
+				rowCount=1;
+			}
+			String nombre ="";
+			
+			int attempts =0;
+			while(attempts <2){
+				try{
+					nombre = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr["+rowCount+"]/td[1]",2).get(0).getText();
+				}catch(StaleElementReferenceException e){
+					
+				}
+				attempts++;
+			}
+			
+			assertEquals(nombresEsperados.get(i),nombre);
+			rowCount++;
+		}
+		
     }
 	//PR26: Confirmar una tarea, inhabilitar el filtro de tareas terminadas, ir a la pagina donde está la tarea terminada y comprobar que se muestra. 
 	@Test
@@ -769,7 +1038,7 @@ public class PlantillaSDI2_Tests1617 {
 	//PR33: Salir de sesión desde cuenta de administrador.
 	@Test
     public void prueba33() {
-		prueba01();
+		loginAdmin();
 		
 		//Hacemos click en el boton de cerrar sesión.
 		WebElement botonCerrarSesión = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//a[contains(@id,'item-cerrarSesion')]", 2).get(0);
@@ -782,11 +1051,18 @@ public class PlantillaSDI2_Tests1617 {
 	//PR34: Salir de sesión desde cuenta de usuario normal.
 	@Test
     public void prueba34() {
-		assertTrue(false); //Se puede
+		loginUser();
+		//Hacemos click en el boton de cerrar sesión.
+		WebElement botonCerrarSesión = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//a[contains(@id,'item-cerrarSesion')]", 2).get(0);
+		botonCerrarSesión.click();
+		
+		//Comrpobamos que estamos en la página de login.
+		SeleniumUtils.textoPresentePagina(driver, "Autentificación");
     }
 	//PR35: Cambio del idioma por defecto a un segundo idioma. (Probar algunas vistas)
 	@Test
     public void prueba35() {
+		SeleniumUtils.ClickSubopcionMenuHover(driver, "form-cabecera:idioma", "form-cabecera:es");
 		assertTrue(false); //Se puede
     }
 	//PR36: Cambio del idioma por defecto a un segundo idioma y vuelta al idioma por defecto. (Probar algunas vistas)
@@ -797,13 +1073,17 @@ public class PlantillaSDI2_Tests1617 {
 	//PR37: Intento de acceso a un  URL privado de administrador con un usuario autenticado como usuario normal.
 	@Test
     public void prueba37() {
-		//TODO: cuando miguel haga su parte.
-		assertTrue(false); //Se puede
+		loginUser();
+		//Intentamos acceder a una de las paginas de usuario
+		driver.get("http://localhost:8280/Notaneitor/admin/users.xhtml");
+		//Te tiene que redireccionar a login
+		
+		SeleniumUtils.textoPresentePagina(driver, "Autentificación");
     }
 	//PR38: Intento de acceso a un  URL privado de usuario normal con un usuario no autenticado.
 	@Test
     public void prueba38() {
-		prueba01(); //Nos logeamos como administrador
+		loginAdmin(); //Nos logeamos como administrador
 		
 		//Intentamos acceder a una de las paginas de usuario
 		driver.get("http://localhost:8280/Notaneitor/user/tasks.xhtml");
