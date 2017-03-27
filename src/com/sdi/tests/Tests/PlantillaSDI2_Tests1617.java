@@ -1061,14 +1061,68 @@ public class PlantillaSDI2_Tests1617 {
     }
 	//PR35: Cambio del idioma por defecto a un segundo idioma. (Probar algunas vistas)
 	@Test
-    public void prueba35() {
-		SeleniumUtils.ClickSubopcionMenuHover(driver, "form-cabecera:idioma", "form-cabecera:es");
-		assertTrue(false); //Se puede
+    public void prueba35() throws InterruptedException {
+		SeleniumUtils.ClickSubopcionMenuHover(driver, "form-cabecera:idioma", "form-cabecera:en");
+		Thread.sleep(1000);
+		SeleniumUtils.textoPresentePagina(driver, "Login");
+		SeleniumUtils.textoPresentePagina(driver, "Username");
+		SeleniumUtils.textoPresentePagina(driver, "Password");
+		SeleniumUtils.textoPresentePagina(driver, "Login");
+		SeleniumUtils.textoPresentePagina(driver, "Sign up");
+		loginAdmin();
+		Thread.sleep(1000);
+		SeleniumUtils.textoPresentePagina(driver, "Users list");
+		SeleniumUtils.textoPresentePagina(driver, "Restore DB");
+		SeleniumUtils.textoPresentePagina(driver, "Login");
+		SeleniumUtils.textoPresentePagina(driver, "Email");
+		SeleniumUtils.textoPresentePagina(driver, "Administrator");
+		SeleniumUtils.textoPresentePagina(driver, "Status");
+		WebElement botonCerrarSesión = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//button[contains(@id,'item-cerrarSesion')]", 2).get(0);
+		botonCerrarSesión.click();
+		loginUser();
+		Thread.sleep(1000);
+		SeleniumUtils.textoPresentePagina(driver, "Title");
+		SeleniumUtils.textoPresentePagina(driver, "Creation date");
+		SeleniumUtils.textoPresentePagina(driver, "Planned date");
+		SeleniumUtils.textoPresentePagina(driver, "Comments");
+		SeleniumUtils.textoPresentePagina(driver, "Tasks list - Inbox");
+		SeleniumUtils.textoPresentePagina(driver, "Inbox");
+		SeleniumUtils.textoPresentePagina(driver, "Today");
+		SeleniumUtils.textoPresentePagina(driver, "This week");
+		
     }
 	//PR36: Cambio del idioma por defecto a un segundo idioma y vuelta al idioma por defecto. (Probar algunas vistas)
 	@Test
-    public void prueba36() {
-		assertTrue(false);
+    public void prueba36() throws InterruptedException {
+		//Probamos si es reversible
+		SeleniumUtils.ClickSubopcionMenuHover(driver, "form-cabecera:idioma", "form-cabecera:en");
+		SeleniumUtils.ClickSubopcionMenuHover(driver, "form-cabecera:idioma", "form-cabecera:es");
+		Thread.sleep(1000);
+		SeleniumUtils.textoPresentePagina(driver, "Autentificación");
+		SeleniumUtils.textoPresentePagina(driver, "Nombre de usuario");
+		SeleniumUtils.textoPresentePagina(driver, "Contraseña");
+		SeleniumUtils.textoPresentePagina(driver, "Login");
+		SeleniumUtils.textoPresentePagina(driver, "Registrarse");
+		loginAdmin();
+		Thread.sleep(1000);
+		SeleniumUtils.textoPresentePagina(driver, "Listado de usuarios");
+		SeleniumUtils.textoPresentePagina(driver, "Restaurar BD");
+		SeleniumUtils.textoPresentePagina(driver, "Login");
+		SeleniumUtils.textoPresentePagina(driver, "Email");
+		SeleniumUtils.textoPresentePagina(driver, "Administrador");
+		SeleniumUtils.textoPresentePagina(driver, "Estado");
+		WebElement botonCerrarSesión = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//button[contains(@id,'item-cerrarSesion')]", 2).get(0);
+		botonCerrarSesión.click();
+		loginUser();
+		Thread.sleep(1000);
+		SeleniumUtils.textoPresentePagina(driver, "Título");
+		SeleniumUtils.textoPresentePagina(driver, "Fecha creación");
+		SeleniumUtils.textoPresentePagina(driver, "Fecha planeada");
+		SeleniumUtils.textoPresentePagina(driver, "Comentarios");
+		SeleniumUtils.textoPresentePagina(driver, "Listado de tareas - Inbox");
+		SeleniumUtils.textoPresentePagina(driver, "Inbox");
+		SeleniumUtils.textoPresentePagina(driver, "Hoy");
+		SeleniumUtils.textoPresentePagina(driver, "Semana");
     }
 	//PR37: Intento de acceso a un  URL privado de administrador con un usuario autenticado como usuario normal.
 	@Test
