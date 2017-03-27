@@ -1,16 +1,19 @@
 package com.sdi.tests.Tests;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -25,7 +28,6 @@ import org.openqa.selenium.firefox.FirefoxProfile;
 
 import alb.util.date.DateUtil;
 
-import com.google.common.collect.Lists;
 import com.sdi.business.AdminService;
 import com.sdi.business.Services;
 import com.sdi.business.TaskService;
@@ -41,8 +43,11 @@ import com.sdi.tests.utils.SeleniumUtils;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING) 
 public class PlantillaSDI2_Tests1617 {
 
-	WebDriver driver; 
-	List<WebElement> elementos = null;
+	static WebDriver driver = getDriver(); 
+	static String url = "http://localhost:8280/Notaneitor";		//TODO: dejar como estaba
+	
+	static DateFormat df = getDf();
+	
 	
 	public PlantillaSDI2_Tests1617()
 	{
@@ -51,22 +56,38 @@ public class PlantillaSDI2_Tests1617 {
 	@Before
 	public void run()
 	{
-		//Este código es para ejecutar con la versión portale de Firefox 46.0
-		File pathToBinary = new File("S:\\firefox\\FirefoxPortable.exe");
-		FirefoxBinary ffBinary = new FirefoxBinary(pathToBinary);
-		FirefoxProfile firefoxProfile = new FirefoxProfile();       
-		driver = new FirefoxDriver(ffBinary,firefoxProfile);
+		
+		
 //		driver.get("http://localhost:8180/sdi2-n");
-		driver.get("http://localhost:8280/Notaneitor");									//TODO: dejar como estaba
+		driver.navigate().to(url);															//TODO: dejar como estaba
 		//Este código es para ejecutar con una versión instalada de Firex 46.0 
 		//driver = new FirefoxDriver();
 		//driver.get("http://localhost:8180/sdi2-n");			
 	}
+	
+	public static WebDriver getDriver(){
+		//Este código es para ejecutar con la versión portale de Firefox 46.0
+		File pathToBinary = new File("S:\\firefox\\FirefoxPortable.exe");
+		FirefoxBinary ffBinary = new FirefoxBinary(pathToBinary);
+		FirefoxProfile firefoxProfile = new FirefoxProfile(); 
+		return new FirefoxDriver(ffBinary,firefoxProfile);
+	}
+	
+	public static DateFormat getDf(){
+		return DateFormat.getDateInstance(DateFormat.FULL);
+	}
+	
 	@After
 	public void end()
 	{
 		//Cerramos el navegador
-		driver.quit();
+//		driver.quit();
+		driver.manage().deleteAllCookies();
+	}
+	
+	@AfterClass
+	static public void endAll() {
+		driver.quit(); 
 	}
 	
 	/**
@@ -78,6 +99,11 @@ public class PlantillaSDI2_Tests1617 {
 	 * @param params mapa con pares nombre de campo - contenido
 	 */
 	private void fillForm(String formID, String buttonID, Map<String,String> params){
+		try {
+			Thread.sleep(500);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 		for(String field : params.keySet()){
 			WebElement nombre = driver.findElement(By.id(formID + ":" + field));
 			nombre.click();
@@ -87,6 +113,15 @@ public class PlantillaSDI2_Tests1617 {
 		//Pulsar el botón.
 		By boton = By.id(formID + ":" + buttonID);
 		driver.findElement(boton).click();	
+	}
+	
+	private List<WebElement> CustomEsperaCargaPaginaxpath(WebDriver driver, String xpath, int timeout){
+		try {
+			Thread.sleep(300);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		return SeleniumUtils.EsperaCargaPaginaxpath(driver, xpath, timeout);
 	}
 	
 	private void loginUser(){
@@ -287,37 +322,58 @@ public class PlantillaSDI2_Tests1617 {
 	@Test
     public void prueba05() throws InterruptedException {
 		loginAdmin();
-		
-		List<WebElement> usuarios=SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
+		Thread.sleep(500);
+		List<WebElement> usuarios=CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
 		String[] nombreUsuarios={"user1","user2","user3"}; //TODO: Quizas completar comprobando + campos, por ahora solo nombres.
 		
 		int counter=0;
 		for(WebElement usuario:usuarios){
-			Thread.sleep(500);
 			assertEquals(nombreUsuarios[counter],usuario.getText());
 			counter++;
 		}
     }
 	//PR06: Cambiar el estado de un usuario de ENABLED a DISABLED. Y tratar de entrar con el usuario que se desactivado.
 	@Test
-    public void prueba06() {
+    public void prueba06() throws InterruptedException {
 		loginAdmin();
+		Thread.sleep(500);
 		
 		//Primer clicamos en el user2 para deshabilitarlo
-		List<WebElement> usuarios = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr[2]", 2);
+		List<WebElement> usuarios = CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr[2]", 2);
 		usuarios.get(0).click();
 		
 		//Lo deshabilitamos con el boton.
-		List<WebElement> botonCambiarEstado = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//button[@id='form-users:table-users:status-button']", 2);
+		int attempts =0;
+		List<WebElement> botonCambiarEstado = null;
+		while(attempts <2){
+			try{
+				botonCambiarEstado = CustomEsperaCargaPaginaxpath(driver, "//button[contains(@id, 'status-button')]", 2);
+			}catch(StaleElementReferenceException e){
+				
+			}
+			attempts++;
+		}
+		
 		botonCambiarEstado.get(0).click();
 		
 		//Comprobamos que aparece deshabilitado aqui.
-		List<WebElement> estadoUsuario = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr[2]/td[4]", 2);
+		attempts =0;
+		List<WebElement> estadoUsuario = null;
+		while(attempts <2){
+			try{
+				estadoUsuario = CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr[2]/td[4]", 2);
+			}catch(StaleElementReferenceException e){
+				
+			}
+			attempts++;
+		}
 		assertEquals("Deshabilitado", estadoUsuario.get(0).getText());
 		
 		//TODO: comprobar que user2 no puede logearse(se necesita el boton log out.)
-		WebElement botonCerrarSesión = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//a[contains(@id,'item-cerrarSesion')]", 2).get(0);
+		WebElement botonCerrarSesión = CustomEsperaCargaPaginaxpath(driver, "//button[contains(@id,'item-cerrarSesion')]", 2).get(0);
 		botonCerrarSesión.click();
+		
+		Thread.sleep(500);
 		
 		Map<String, String> params = new HashMap<>();
 		params.put("login", "user2");
@@ -333,21 +389,21 @@ public class PlantillaSDI2_Tests1617 {
 	@Test
     public void prueba07() throws InterruptedException {
 		loginAdmin();
-		
+
 		//Primer clicamos en el user2 para deshabilitarlo
-				List<WebElement> usuarios = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr[2]", 2);
+				List<WebElement> usuarios = CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr[2]", 2);
 				usuarios.get(0).click();
-				
+
 				//Lo deshabilitamos con el boton.
-				List<WebElement> botonCambiarEstado = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//button[@id='form-users:table-users:status-button']", 2);
+				List<WebElement> botonCambiarEstado = CustomEsperaCargaPaginaxpath(driver, "//button[@id='form-users:table-users:status-button']", 2);
 				botonCambiarEstado.get(0).click();
 				
 				//Comprobamos que aparece deshabilitado aqui.
-				List<WebElement> estadoUsuario = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr[2]/td[4]", 2);
+				List<WebElement> estadoUsuario = CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr[2]/td[4]", 2);
 				assertEquals("Habilitado", estadoUsuario.get(0).getText());
 				
 				//TODO: comprobar que user2 PUEDE logearse(se necesita el boton log out.)
-				WebElement botonCerrarSesión = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//a[contains(@id,'item-cerrarSesion')]", 2).get(0);
+				WebElement botonCerrarSesión = CustomEsperaCargaPaginaxpath(driver, "//button[contains(@id,'item-cerrarSesion')]", 2).get(0);
 				botonCerrarSesión.click();
 				
 				Map<String, String> params = new HashMap<>();
@@ -366,12 +422,12 @@ public class PlantillaSDI2_Tests1617 {
 		loginAdmin();
 		
 		//Hacemos click en la cabecera de login para ordenar por criterio
-		WebElement loginButton = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr/th[1]", 2).get(0);
+		WebElement loginButton = CustomEsperaCargaPaginaxpath(driver, "//table/thead/tr/th[1]", 2).get(0);
 		loginButton.click();
 		
 		//Por defecto ascendente, luego el orden es:
 		String[] loginUsuariosEx = {"user1","user2","user3"};
-		List<WebElement> loginUsuariosReal=SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
+		List<WebElement> loginUsuariosReal=CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
 		int counter=0;
 		for(WebElement loginUsuario: loginUsuariosReal){
 			assertEquals(loginUsuariosEx[counter], loginUsuario.getText());
@@ -379,7 +435,7 @@ public class PlantillaSDI2_Tests1617 {
 		}
 		
 		loginButton.click(); //Volvemos a pulsar para cambiar a orden inverso:
-		loginUsuariosReal=SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
+		loginUsuariosReal=CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
 		counter=2; //Empezamos por el final del array
 		for(WebElement loginUsuario: loginUsuariosReal){
 			assertEquals(loginUsuariosEx[counter], loginUsuario.getText());
@@ -393,12 +449,12 @@ public class PlantillaSDI2_Tests1617 {
 		loginAdmin();
 		
 		//Hacemos click en la cabecera de login para ordenar por criterio
-		WebElement emailButton = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr/th[2]", 2).get(0);
+		WebElement emailButton = CustomEsperaCargaPaginaxpath(driver, "//table/thead/tr/th[2]", 2).get(0);
 		emailButton.click();
 		
 		//Por defecto ascendente, luego el orden es:
 		String[] loginUsuariosEx = {"user1","user2","user3"};
-		List<WebElement> loginUsuariosReal=SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
+		List<WebElement> loginUsuariosReal=CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
 		int counter=0;
 		for(WebElement loginUsuario: loginUsuariosReal){
 			assertEquals(loginUsuariosEx[counter], loginUsuario.getText());
@@ -406,7 +462,7 @@ public class PlantillaSDI2_Tests1617 {
 		}
 		
 		emailButton.click(); //Volvemos a pulsar para cambiar a orden inverso:
-		loginUsuariosReal=SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
+		loginUsuariosReal=CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
 		counter=2; //Empezamos por el final del array
 		for(WebElement loginUsuario: loginUsuariosReal){
 			assertEquals(loginUsuariosEx[counter], loginUsuario.getText());
@@ -420,26 +476,26 @@ public class PlantillaSDI2_Tests1617 {
 	
 		//Primer clicamos en el user2 para deshabilitarlo
 		Thread.sleep(500);
-		List<WebElement> usuarios = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr[2]", 2);
+		List<WebElement> usuarios = CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr[2]", 2);
 		usuarios.get(0).click();
 		
 		//Lo deshabilitamos con el boton.
-		List<WebElement> botonCambiarEstado = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//button[@id='form-users:table-users:status-button']", 2);
+		List<WebElement> botonCambiarEstado = CustomEsperaCargaPaginaxpath(driver, "//button[@id='form-users:table-users:status-button']", 2);
 		botonCambiarEstado.get(0).click();
 		
 		//Comprobamos que aparece deshabilitado aqui.
-		List<WebElement> estadoUsuario = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr[2]/td[4]", 2);
+		List<WebElement> estadoUsuario = CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr[2]/td[4]", 2);
 		assertEquals("Deshabilitado", estadoUsuario.get(0).getText());	
 		//Hacemos click en la cabecera de login para ordenar por criterio
-		WebElement statusButton = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr/th[4]", 2).get(0);
+		WebElement statusButton = CustomEsperaCargaPaginaxpath(driver, "//table/thead/tr/th[4]", 2).get(0);
 		statusButton.click();
 		
 		///Se opta por comporobar por ambos login y enabled disabled.
 		//Por defecto ascendente, luego el orden es:
 		String[] loginUsuariosEx = {"user1","user3","user2"};
 		String[] statusUsuariosEx = {"Habilitado","Habilitado","Deshabilitado"};
-		List<WebElement> loginUsuariosReal=SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
-		List<WebElement> statusUsuariosReal=SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[4]", 2);
+		List<WebElement> loginUsuariosReal=CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
+		List<WebElement> statusUsuariosReal=CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[4]", 2);
 		int counter=0;
 		for(WebElement loginUsuario: loginUsuariosReal){
 			assertEquals(loginUsuariosEx[counter], loginUsuario.getText());
@@ -449,8 +505,8 @@ public class PlantillaSDI2_Tests1617 {
 		
 		statusButton.click(); //Volvemos a pulsar para cambiar a orden inverso:
 		String[] loginUsuariosExSecondTime = {"user3","user1","user2"}; //La posicion del user1 se mantiene siempre la más alta luego hay que declararlo de nuevo.
-		loginUsuariosReal=SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
-		statusUsuariosReal=SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[4]", 2);
+		loginUsuariosReal=CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
+		statusUsuariosReal=CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[4]", 2);
 		counter=2; //Empezamos por el final del array
 		for(WebElement loginUsuario: loginUsuariosReal){
 			assertEquals(loginUsuariosExSecondTime[counter], loginUsuario.getText());
@@ -459,14 +515,14 @@ public class PlantillaSDI2_Tests1617 {
 		}
 		
 		//Restauramos el orden previo para dejar el estado del usuario comoe estaba de la prueba07
-		WebElement loginButton = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr/th[1]", 2).get(0);
+		WebElement loginButton = CustomEsperaCargaPaginaxpath(driver, "//table/thead/tr/th[1]", 2).get(0);
 		loginButton.click();
 		
 		//Ponemos el user2 como estaba de nuevo.
-		WebElement user2 = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr[1]", 2).get(0);
+		WebElement user2 = CustomEsperaCargaPaginaxpath(driver, "//table/thead/tr[1]", 2).get(0);
 		user2.click();
 		
-		List<WebElement> botonCambiarEstadoAfter = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//button[@id='form-users:table-users:status-button']", 2);
+		List<WebElement> botonCambiarEstadoAfter = CustomEsperaCargaPaginaxpath(driver, "//button[@id='form-users:table-users:status-button']", 2);
 		botonCambiarEstadoAfter.get(0).click();
 		
 		
@@ -483,14 +539,16 @@ public class PlantillaSDI2_Tests1617 {
 		SeleniumUtils.textoPresentePagina(driver, "user3@gmail.com");
 		
 		//Borramos el user3;
-		WebElement user3 = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr[3]", 2).get(0);
+		WebElement user3 = CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr[3]", 2).get(0);
 		user3.click();
 		
-		WebElement botonBorrarUsuario = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//button[contains(@id,'delete-button')]", 2).get(0);
+		WebElement botonBorrarUsuario = CustomEsperaCargaPaginaxpath(driver, "//button[contains(@id,'delete-button')]", 2).get(0);
 		botonBorrarUsuario.click();
 		
-		WebElement confirmationButton = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//button[contains(@id,'delete-yes')]", 2).get(0);
+		WebElement confirmationButton = CustomEsperaCargaPaginaxpath(driver, "//button[contains(@id,'delete-yes')]", 2).get(0);
 		confirmationButton.click();
+		
+		Thread.sleep(500);
 		
 		SeleniumUtils.textoNoPresentePagina(driver, "user3@gmail.com");	
 		
@@ -644,7 +702,7 @@ public class PlantillaSDI2_Tests1617 {
     public void prueba18() throws InterruptedException {
 		loginUser();
 		//Cogemos el input del filtro e introducimos el filtrado
-		WebElement inputFiltroTitulo = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/thead/tr/th[1]/input", 2).get(0);
+		WebElement inputFiltroTitulo = CustomEsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/thead/tr/th[1]/input", 2).get(0);
 		inputFiltroTitulo.sendKeys("tarea2");
 		//Ahora Las tareas esperadas son
 		String[] template = {"Tarea20","Tarea2"};
@@ -652,7 +710,7 @@ public class PlantillaSDI2_Tests1617 {
 		//Y las que se muestran en realidad
 		//Debemos esperar para que el filtrado acabe.
 		Thread.sleep(1000);
-		List<WebElement> tareas = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr/td[1]", 2);
+		List<WebElement> tareas = CustomEsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr/td[1]", 2);
 		for(int i=0;i<tareas.size();i++){
 			assertTrue(tareasEsperadas.contains(tareas.get(i).getText()));
 		}
@@ -674,36 +732,36 @@ public class PlantillaSDI2_Tests1617 {
     public void prueba20() throws InterruptedException {
 		loginUser();
 		//Nos dirigimos al listado de tareas de hoy
-		WebElement botonHoy = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//a[contains(@id,'tareas-hoy')]", 2).get(0);
+		WebElement botonHoy = CustomEsperaCargaPaginaxpath(driver, "//a[contains(@id,'tareas-hoy')]", 2).get(0);
 		botonHoy.click();
 		//ordenamos por fecha
-		WebElement botonFechaPlaneada = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr/th[3]", 2).get(0);
+		WebElement botonFechaPlaneada = CustomEsperaCargaPaginaxpath(driver, "//table/thead/tr/th[3]", 2).get(0);
 		botonFechaPlaneada.click();
 		//Creamos las fechas esperadas
 		List<String> fechasEsperadas = new ArrayList<String>();
 		for(int i=1;i<=20;i++){
 			if(i<=10){
-				fechasEsperadas.add(DateUtil.addDays(DateUtil.today(), i-31).toString());
+				fechasEsperadas.add(df.format(DateUtil.addDays(DateUtil.today(), i-31)));
 			}
 			else{
-				fechasEsperadas.add(DateUtil.today().toString());
+				fechasEsperadas.add(df.format(DateUtil.today()));
 			}
 		}
 		
 		//Cogemos los elementos reales
-		List<WebElement> fechasPlaneadas = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[3]", 2);
+		List<WebElement> fechasPlaneadas = CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[3]", 2);
 		for(int i=0;i<20;i++){
 			if(i==8){
 				//Debemos pasar a la sigueinte página.
-				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[2]", 2).get(0);
+				WebElement page = CustomEsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[2]", 2).get(0);
 				page.click();
-				fechasPlaneadas = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[3]", 2);
+				fechasPlaneadas = CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[3]", 2);
 			}
 			if(i==16){
 				//Debemos pasar a la sigueinte página.
-				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[3]", 2).get(0);
+				WebElement page = CustomEsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[3]", 2).get(0);
 				page.click();
-				fechasPlaneadas = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[3]", 2);
+				fechasPlaneadas = CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[3]", 2);
 			}
 			assertEquals(fechasEsperadas.get(i),fechasPlaneadas.get(i%8).getText());
 		}
@@ -714,11 +772,11 @@ public class PlantillaSDI2_Tests1617 {
 		loginUser();
 		
 		//Nos dirigimos al listado de tareas de hoy
-		WebElement botonHoy = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//a[contains(@id,'tareas-hoy')]", 2).get(0);
+		WebElement botonHoy = CustomEsperaCargaPaginaxpath(driver, "//a[contains(@id,'tareas-hoy')]", 2).get(0);
 		botonHoy.click();
 		
 		//ordenamos por fecha ya que sabemos a priori que tareas son als que estan retrasadas y evitamos paginar de mas.
-		WebElement botonFechaPlaneada = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr/th[3]", 2).get(0);
+		WebElement botonFechaPlaneada = CustomEsperaCargaPaginaxpath(driver, "//table/thead/tr/th[3]", 2).get(0);
 		botonFechaPlaneada.click();
 		
 		//Introducimos las tareas no retrasadas que son las sonde hoy 11-20
@@ -734,8 +792,8 @@ public class PlantillaSDI2_Tests1617 {
 		int attempts =0;
 		while(attempts <2){
 			try{
-				nombresRetrasadas = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[!(contains(@class,'delay'))]/td[1]", 2);
-				planeadaRetrasada = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[!(contains(@class,'delay'))]/td[3]", 2);
+				nombresRetrasadas = CustomEsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[!(contains(@class,'delay'))]/td[1]", 2);
+				planeadaRetrasada = CustomEsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[!(contains(@class,'delay'))]/td[3]", 2);
 			}catch(StaleElementReferenceException e){
 				
 			}
@@ -749,14 +807,14 @@ public class PlantillaSDI2_Tests1617 {
 		}
 		
 		//Segunda pagina
-		WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[2]", 2).get(0);
+		WebElement page = CustomEsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[2]", 2).get(0);
 		page.click();
 		
 		attempts =0;
 		while(attempts <2){
 			try{
-				nombresRetrasadas = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[not(contains(@class,'delay'))]/td[1]", 2);
-				planeadaRetrasada = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[not(contains(@class,'delay'))]/td[3]", 2);
+				nombresRetrasadas = CustomEsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[not(contains(@class,'delay'))]/td[1]", 2);
+				planeadaRetrasada = CustomEsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[not(contains(@class,'delay'))]/td[3]", 2);
 			}catch(StaleElementReferenceException e){
 				
 			}
@@ -776,11 +834,11 @@ public class PlantillaSDI2_Tests1617 {
 		loginUser();
 		
 		//Nos dirigimos al listado de tareas de hoy
-		WebElement botonHoy = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//a[contains(@id,'tareas-hoy')]", 2).get(0);
+		WebElement botonHoy = CustomEsperaCargaPaginaxpath(driver, "//a[contains(@id,'tareas-hoy')]", 2).get(0);
 		botonHoy.click();
 		
 		//ordenamos por fecha ya que sabemos a priori que tareas son als que no estan retrasadas y evitamos paginar de mas.
-		WebElement botonFechaPlaneada = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr/th[3]", 2).get(0);
+		WebElement botonFechaPlaneada = CustomEsperaCargaPaginaxpath(driver, "//table/thead/tr/th[3]", 2).get(0);
 		botonFechaPlaneada.click();
 		//Introducimos las tareas no retrasadas que son las sonde hoy 1-10
 		List<String> tareasEsperadas = new ArrayList<String>();
@@ -794,7 +852,7 @@ public class PlantillaSDI2_Tests1617 {
 		int attempts =0;
 		while(attempts <2){
 			try{
-				nombresNoRetrasadas = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[contains(@class,'delay')]/td[1]", 2);
+				nombresNoRetrasadas = CustomEsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[contains(@class,'delay')]/td[1]", 2);
 			}catch(StaleElementReferenceException e){
 				
 			}
@@ -806,13 +864,13 @@ public class PlantillaSDI2_Tests1617 {
 		}
 		
 		//Segunda pagina
-		WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[2]", 2).get(0);
+		WebElement page = CustomEsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[2]", 2).get(0);
 		page.click();
 		
 		attempts =0;
 		while(attempts <2){
 			try{
-				nombresNoRetrasadas = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[contains(@class,'delay')]/td[1]", 2);
+				nombresNoRetrasadas = CustomEsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[contains(@class,'delay')]/td[1]", 2);
 			}catch(StaleElementReferenceException e){
 				
 			}
@@ -829,7 +887,7 @@ public class PlantillaSDI2_Tests1617 {
 		loginUser();
 		
 		//Nos dirigimos al listado de tareas de semana
-		WebElement botonHoy = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//a[contains(@id,'tareas-semana')]", 2).get(0);
+		WebElement botonHoy = CustomEsperaCargaPaginaxpath(driver, "//a[contains(@id,'tareas-semana')]", 2).get(0);
 		botonHoy.click();
 		
 		//Sabemos las tareas que no estan retrasadas con su fecha
@@ -846,13 +904,13 @@ public class PlantillaSDI2_Tests1617 {
 		for(int i=1;i<=20;i++){
 			if(i==9){
 				//Debemos pasar a la sigueinte página.
-				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[2]", 2).get(0);
+				WebElement page = CustomEsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[2]", 2).get(0);
 				page.click();
 				rowCount=1;
 			}
 			if(i==17){
 				//Debemos pasar a la sigueinte página.
-				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[3]", 2).get(0);
+				WebElement page = CustomEsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[3]", 2).get(0);
 				page.click();
 				rowCount=1;
 			}
@@ -862,8 +920,8 @@ public class PlantillaSDI2_Tests1617 {
 			int attempts =0;
 			while(attempts <2){
 				try{
-					nombre = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[!(contains(@class,'delay'))]/td[1]",2).get(0).toString();
-					planeada = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[!(contains(@class,'delay'))]/td[3]", 2).get(0).getText();
+					nombre = CustomEsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[!(contains(@class,'delay'))]/td[1]",2).get(0).toString();
+					planeada = CustomEsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[!(contains(@class,'delay'))]/td[3]", 2).get(0).getText();
 				}catch(StaleElementReferenceException e){
 					
 				}
@@ -881,29 +939,29 @@ public class PlantillaSDI2_Tests1617 {
     public void prueba24() {
 		loginUser();
 		//Nos dirigimos al listado de tareas de semana
-		WebElement botonSemana = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//a[contains(@id,'tareas-semana')]", 2).get(0);
+		WebElement botonSemana = CustomEsperaCargaPaginaxpath(driver, "//a[contains(@id,'tareas-semana')]", 2).get(0);
 		botonSemana.click();
 		//ordenamos por fecha
-		WebElement botonFechaPlaneada = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr/th[3]", 2).get(0);
+		WebElement botonFechaPlaneada = CustomEsperaCargaPaginaxpath(driver, "//table/thead/tr/th[3]", 2).get(0);
 		botonFechaPlaneada.click();
 		
 		int rowCount=1;
 		for(int i=0;i<30;i++){
 			if(i==8){
 				//Debemos pasar a la sigueinte página.
-				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[2]", 2).get(0);
+				WebElement page = CustomEsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[2]", 2).get(0);
 				page.click();
 				rowCount=1;
 			}
 			if(i==16){
 				//Siguiente página
-				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[3]", 2).get(0);
+				WebElement page = CustomEsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[3]", 2).get(0);
 				page.click();
 				rowCount=1;
 			}
 			if(i==24){
 				//Siguiente página
-				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[4]", 2).get(0);
+				WebElement page = CustomEsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[4]", 2).get(0);
 				page.click();
 				rowCount=1;
 			}
@@ -913,7 +971,7 @@ public class PlantillaSDI2_Tests1617 {
 			int attempts =0;
 			while(attempts <2){
 				try{
-					planeada = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr["+rowCount+"]/td[3]", 2).get(0).getText();
+					planeada = CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr["+rowCount+"]/td[3]", 2).get(0).getText();
 				}catch(StaleElementReferenceException e){
 					
 				}
@@ -942,10 +1000,10 @@ public class PlantillaSDI2_Tests1617 {
     public void prueba25() {
 		loginUser();
 		//Nos dirigimos al listado de tareas de semana
-		WebElement botonSemana = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//a[contains(@id,'tareas-semana')]", 2).get(0);
+		WebElement botonSemana = CustomEsperaCargaPaginaxpath(driver, "//a[contains(@id,'tareas-semana')]", 2).get(0);
 		botonSemana.click();
 		//ordenamos por fecha
-		WebElement botonTitulo= SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/thead/tr/th[1]/span", 2).get(0);
+		WebElement botonTitulo= CustomEsperaCargaPaginaxpath(driver, "//table/thead/tr/th[1]/span", 2).get(0);
 		botonTitulo.click();
 		
 		//Las tareas se ordenan por el nombre de modo que-> Tarea1, tarea10,...
@@ -967,19 +1025,19 @@ public class PlantillaSDI2_Tests1617 {
 		for(int i=0;i<30;i++){
 			if(i==8){
 				//Debemos pasar a la sigueinte página.
-				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[2]", 2).get(0);
+				WebElement page = CustomEsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[2]", 2).get(0);
 				page.click();
 				rowCount=1;
 			}
 			if(i==16){
 				//Debemos pasar a la sigueinte página.
-				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[3]", 2).get(0);
+				WebElement page = CustomEsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[3]", 2).get(0);
 				page.click();
 				rowCount=1;
 			}
 			if(i==24){
 				//Debemos pasar a la sigueinte página.
-				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[4]", 2).get(0);
+				WebElement page = CustomEsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[4]", 2).get(0);
 				page.click();
 				rowCount=1;
 			}
@@ -988,7 +1046,7 @@ public class PlantillaSDI2_Tests1617 {
 			int attempts =0;
 			while(attempts <2){
 				try{
-					nombre = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr["+rowCount+"]/td[1]",2).get(0).getText();
+					nombre = CustomEsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr["+rowCount+"]/td[1]",2).get(0).getText();
 				}catch(StaleElementReferenceException e){
 					
 				}
@@ -1041,7 +1099,7 @@ public class PlantillaSDI2_Tests1617 {
 		loginAdmin();
 		
 		//Hacemos click en el boton de cerrar sesión.
-		WebElement botonCerrarSesión = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//a[contains(@id,'item-cerrarSesion')]", 2).get(0);
+		WebElement botonCerrarSesión = CustomEsperaCargaPaginaxpath(driver, "//button[contains(@id,'item-cerrarSesion')]", 2).get(0);
 		botonCerrarSesión.click();
 		
 		//Comrpobamos que estamos en la página de login.
@@ -1053,7 +1111,7 @@ public class PlantillaSDI2_Tests1617 {
     public void prueba34() {
 		loginUser();
 		//Hacemos click en el boton de cerrar sesión.
-		WebElement botonCerrarSesión = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//a[contains(@id,'item-cerrarSesion')]", 2).get(0);
+		WebElement botonCerrarSesión = CustomEsperaCargaPaginaxpath(driver, "//button[contains(@id,'item-cerrarSesion')]", 2).get(0);
 		botonCerrarSesión.click();
 		
 		//Comrpobamos que estamos en la página de login.
@@ -1144,6 +1202,7 @@ public class PlantillaSDI2_Tests1617 {
 		//Te tiene que redireccionar a login
 		
 		SeleniumUtils.textoPresentePagina(driver, "Autentificación");
+		
     }
 
 	
