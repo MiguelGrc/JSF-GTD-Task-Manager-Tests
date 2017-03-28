@@ -1063,6 +1063,9 @@ public class PlantillaSDI2_Tests1617 {
 				assertEquals(planeadaEsperada,planeadas.get(i%8).getText());
 			}
 		}
+				}
+			}
+			
     }
 	//PR24: Funcionamiento correcto de la ordenación por día.
 	@Test
