@@ -1104,6 +1104,7 @@ public class PlantillaSDI2_Tests1617 {
 			int attempts =0;
 			while(attempts <2){
 				try{
+					//TODO: Optimizable
 					planeada = CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr["+rowCount+"]/td[3]", 2).get(0).getText();
 				}catch(StaleElementReferenceException e){
 					
@@ -1179,6 +1180,7 @@ public class PlantillaSDI2_Tests1617 {
 			int attempts =0;
 			while(attempts <2){
 				try{
+					//TODO: se peude optimizar
 					nombre = CustomEsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr["+rowCount+"]/td[1]",2).get(0).getText();
 				}catch(StaleElementReferenceException e){
 					
@@ -1439,8 +1441,178 @@ public class PlantillaSDI2_Tests1617 {
     }
 	//PR31: Editar el nombre, y categoría (Se cambia a sin categoría) de una tarea de la lista Hoy y comprobar que las tres pseudolistas se refrescan correctamente.
 	@Test
-    public void prueba31() {
-		assertTrue(false);
+    public void prueba31() throws InterruptedException {
+		loginUser();
+		
+		//En Inbox estan las tareas ordenadas potr fecha, de tal manera
+		//que las primeras serán las de hoy ejecutando el test en el orden correcto
+		//por eso somos capaces de coger la primera con certeza de que si se pone
+		//categoría sabemos que no estará en Inbox pero si en hoy y semana. 
+		
+		//Seleccionamos la primera tarea que aparece en el listado.
+		WebElement primeraTarea = CustomEsperaCargaPaginaxpath(driver, "//div[contains(@id, 'table-tasks')]/div/table/tbody/tr[1]", 2).get(0);
+		primeraTarea.click();
+		
+		//Seleccionamos la opción crear tarea.
+		WebElement botonEditar = CustomEsperaCargaPaginaxpath(driver, "//button[contains(@id, 'edit-task-button')]", 2).get(0);
+		botonEditar.click();
+		
+		Thread.sleep(500);
+		//Para encontrarlo con facilidad le asignamos un comentario específico
+		WebElement comentarios = driver.findElement(By.id("form-edit-task:edit-task-comments"));
+		comentarios.click();
+		comentarios.clear();
+		comentarios.sendKeys("Prueba número 4");
+		
+		//Seleccionamos la categoría 1
+		WebElement selectorCategoria = CustomEsperaCargaPaginaxpath(driver, "//label[contains(@id, 'edit-task-category-selector')]", 2).get(0);
+		selectorCategoria.click();
+		WebElement categoria = CustomEsperaCargaPaginaxpath(driver, "//ul[contains(@id, 'edit-task-category-selector')]/li[contains(@data-label, 'Category1')]", 2).get(0);
+		categoria.click();
+		
+		Thread.sleep(500); //TODO
+		By boton = By.id("form-edit-task:edit-task-edit-button");
+		driver.findElement(boton).click();
+		
+		//Nos encontramos en el listado inbox
+		
+		boolean found = false;
+		
+		int rowCount=1;
+		outerLoop:
+		for(int i=0;i<15;i++){ //TODO: ajustar este loop
+			if(i==8){
+				//Debemos pasar a la siguinte página.
+				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[2]", 2).get(0);
+				page.click();
+				rowCount=1;
+			}
+			if(i==16){
+				//Siguiente página
+				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[3]", 2).get(0);
+				page.click();
+				rowCount=1;
+			}
+			if(i==24){
+				//Siguiente página
+				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[4]", 2).get(0);
+				page.click();
+				rowCount=1;
+			}
+			if(i==32){
+				//Siguiente página
+				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[5]", 2).get(0);
+				page.click();
+				rowCount=1;
+			}
+			
+			//Buscamos la tarea que marcamos antes como finalizada
+			if("Prueba número 4".equals(CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr["+rowCount+"]/td[4]", 2).get(0).getText())){
+				found = true;
+				break outerLoop;
+			}
+			rowCount++;
+		}
+		//No tiene que encontrarla en Inbox
+		assertTrue(!found);
+		
+		//Nos vamos a Hoy
+		WebElement botonHoy = CustomEsperaCargaPaginaxpath(driver, "//a[contains(@id,'tareas-hoy')]", 2).get(0);
+		botonHoy.click();
+		
+		//Nos ponemos en la priemra pagina
+		WebElement initpage = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[1]", 2).get(0);
+		initpage.click();
+		
+		found = false;
+		
+		rowCount=1;
+		outerLoop:
+		for(int i=0;i<35;i++){ //TODO: mejorar bounds del loop
+			if(i==8){
+				//Debemos pasar a la siguinte página.
+				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[2]", 2).get(0);
+				page.click();
+				rowCount=1;
+			}
+			if(i==16){
+				//Siguiente página
+				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[3]", 2).get(0);
+				page.click();
+				rowCount=1;
+			}
+			if(i==24){
+				//Siguiente página
+				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[4]", 2).get(0);
+				page.click();
+				rowCount=1;
+			}
+			if(i==32){
+				//Siguiente página
+				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[5]", 2).get(0);
+				page.click();
+				rowCount=1;
+			}
+			
+			//Buscamos la tarea que marcamos antes como finalizada
+			if("Prueba número 4".equals(CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr["+rowCount+"]/td[5]", 2).get(0).getText())){
+				found = true;
+				break outerLoop;
+			}
+			rowCount++;
+		}
+		//Se tiene que encontrar en Hoy.
+		assertTrue(found);
+		
+		
+		//Nos vamos a semana
+		WebElement botonSemana = CustomEsperaCargaPaginaxpath(driver, "//a[contains(@id,'tareas-semana')]", 2).get(0);
+		botonSemana.click();
+		
+		initpage = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[1]", 2).get(0);
+		initpage.click();
+		
+		found = false;
+		
+		rowCount=1;
+		outerLoop:
+		for(int i=0;i<38;i++){
+			if(i==8){
+				//Debemos pasar a la siguinte página.
+				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[2]", 2).get(0);
+				page.click();
+				rowCount=1;
+			}
+			if(i==16){
+				//Siguiente página
+				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[3]", 2).get(0);
+				page.click();
+				rowCount=1;
+			}
+			if(i==24){
+				//Siguiente página
+				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[4]", 2).get(0);
+				page.click();
+				rowCount=1;
+			}
+			if(i==32){
+				//Siguiente página
+				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[5]", 2).get(0);
+				page.click();
+				rowCount=1;
+			}
+			
+			//Buscamos la tarea que marcamos antes como finalizada
+			if("Prueba número 4".equals(CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr["+rowCount+"]/td[5]", 2).get(0).getText())){
+				found = true;
+				break outerLoop;
+			}
+			rowCount++;
+		}
+		//Se tiene que encontrar en Hoy.
+		assertTrue(found);
+		
+		
     }
 	//PR32: Marcar una tarea como finalizada. Comprobar que desaparece de las tres pseudolistas.
 	@Test
