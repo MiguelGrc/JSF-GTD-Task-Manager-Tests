@@ -634,16 +634,16 @@ public class PlantillaSDI2_Tests1617 {
     public void prueba16() {
 		loginUser();
 		//Las tareas Inbox correspondientes al usuario1 (sin categoria) son de la 1 a la 20 (20-30 con categoria)
-		Map<String,String[]> inboxTasksRetrasadas = new HashMap<String,String[]>();
+		Map<String,String[]> inboxTasksHoy = new HashMap<String,String[]>();
 		//Primero añadimos las que tienen fecha planeada más atrasada(aparecen así por defecto) tareas de la 11 a la 20
 		for(int i=11;i<=20;i++){
-			String[] datosAMirar = {"Tarea"+i,DateUtil.today().toString(),DateUtil.today().toString()};
-			inboxTasksRetrasadas.put("Tarea"+i, datosAMirar);
+			String[] datosAMirar = {"Tarea"+i,df.format(DateUtil.today()),df.format(DateUtil.today())};
+			inboxTasksHoy.put("Tarea"+i, datosAMirar);
 		}
 		Map<String,String[]> inboxTasks = new HashMap<String,String[]>();
 		//A continuación las que no estan retrasadas 1-10
 		for(int i=1;i<=10;i++){
-			String[] datosAMirar = {"Tarea"+i,DateUtil.today().toString(),DateUtil.addDays(DateUtil.today(), 6).toString()};
+			String[] datosAMirar = {"Tarea"+i,df.format(DateUtil.today()),df.format(DateUtil.addDays(DateUtil.today(), 6))};
 			inboxTasks.put("Tarea"+i,datosAMirar);
 		}
 		int rowCount=1;
@@ -682,7 +682,7 @@ public class PlantillaSDI2_Tests1617 {
 			if(i<=10){
 				//Las 20 primeras retrasadas
 				//Tenemos que tener en cuenta que el orden no es fijo, usamos el mapa
-				assertArrayEquals(inboxTasksRetrasadas.get(parsedTask[0]),parsedTask);
+				assertArrayEquals(inboxTasksHoy.get(parsedTask[0]),parsedTask);
 			}
 			else{
 				//Las 10 ultimas no retrasadas
@@ -695,7 +695,61 @@ public class PlantillaSDI2_Tests1617 {
 	//PR17: Funcionamiento correcto de la ordenación por fecha planeada.
 	@Test
     public void prueba17() {
-		assertTrue(false);
+		//Ya vienen ordenadas por defecto pero se demuestra de todas formas
+		loginUser();
+		
+		List<String> fechaPlaneadaEsperadaHoy = new ArrayList<String>();
+		//Añadimos las de hoy 11-20
+		for(int i=11;i<=20;i++){
+			fechaPlaneadaEsperadaHoy.add(df.format(DateUtil.today()));
+		}
+		List<String> fechaPlaneadaEsperadaFuturo = new ArrayList<String>();
+		//Añadimos las del futuro 1-10
+		for(int i=1;i<=10;i++){
+			fechaPlaneadaEsperadaFuturo.add(df.format(DateUtil.addDays(DateUtil.today(), 6)));
+		}
+		
+		int rowCount=1;
+		//Cogemos todas las tareas
+		for(int i=1;i<=20;i++){
+			if(i==9){
+				//Debemos pasar a la sigueinte página.
+				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[2]", 2).get(0);
+				page.click();
+				rowCount=1;
+			}
+			if(i==17){
+				//Debemos pasar a la sigueinte página.
+				WebElement page = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[3]", 2).get(0);
+				page.click();
+				rowCount=1;
+			}
+			String planeada="";
+			
+			int attempts =0;
+			while(attempts <2){
+				try{
+					planeada = SeleniumUtils.EsperaCargaPaginaxpath(driver, "//table/tbody/tr["+rowCount+"]/td[3]", 2).get(0).getText();
+				}catch(StaleElementReferenceException e){
+					
+				}
+				attempts++;
+			}
+			
+			if(i<=10){
+				//Las 20 primeras retrasadas
+				//Tenemos que tener en cuenta que el orden no es fijo, usamos el mapa
+				assertTrue(fechaPlaneadaEsperadaHoy.contains(planeada));
+				assertTrue(!fechaPlaneadaEsperadaFuturo.contains(planeada));
+			}
+			else{
+				//Las 10 ultimas no retrasadas
+				assertTrue(!fechaPlaneadaEsperadaHoy.contains(planeada));
+				assertTrue(fechaPlaneadaEsperadaFuturo.contains(planeada));
+			}
+			rowCount++;
+		}
+		
     }
 	//PR18: Funcionamiento correcto del filtrado.
 	@Test
@@ -714,18 +768,67 @@ public class PlantillaSDI2_Tests1617 {
 		for(int i=0;i<tareas.size();i++){
 			assertTrue(tareasEsperadas.contains(tareas.get(i).getText()));
 		}
-		
-		//TODO: si arreglado mirar si se puede.
-		
-//		inputFiltroTitulo.clear();
-//		inputFiltroTitulo.sendKeys("tarea1");
-//		
-//		String[] tareasEsperadas2 = {"Tarea11",""}
     }
 	//PR19: Funcionamiento correcto de la ordenación por categoría.
 	@Test
     public void prueba19() {
-		assertTrue(false); //Se puede
+		loginUser();
+		//Nos dirigimos al listado de tareas de hoy
+		WebElement botonHoy = CustomEsperaCargaPaginaxpath(driver, "//a[contains(@id,'tareas-hoy')]", 2).get(0);
+		botonHoy.click();
+		//Ordenamos por categoria
+		WebElement botonCategoria = CustomEsperaCargaPaginaxpath(driver, "//table/thead/tr/th[4]", 2).get(0);
+		botonCategoria.click();
+		
+		//Primero salen los que no tienen categoría, Despues los que tienen categoria:
+		List<String> tareasSinCategoria = new ArrayList<String>();
+		Map<String,String> tareasCategoria = new HashMap<String,String>();
+		//las 10 primeras no tienen categoria y siendo de hoy
+		for(int i=11;i<=20;i++)
+			tareasSinCategoria.add("Tarea"+i);
+		//Las siguientes 20 
+		for(int i=21;i<=30;i++){
+			String categoria="";
+			if(i<=23){
+				categoria="Category1";
+			}
+			else if(i<=26){
+				categoria="Category2";
+			}
+			else{
+				categoria="Category3";
+			}
+			tareasCategoria.put("Tarea"+i,categoria);
+		}
+		//Cogemos los elementos reales
+		List<WebElement> Tareas = CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
+		List<WebElement> categorias = CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[4]", 2);
+		for(int i=0;i<20;i++){
+			if(i==8){
+				//Debemos pasar a la sigueinte página.
+				WebElement page = CustomEsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[2]", 2).get(0);
+				page.click();
+				Tareas = CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
+				categorias = CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[4]", 2);
+			}
+			if(i==16){
+				//Debemos pasar a la sigueinte página.
+				WebElement page = CustomEsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[3]", 2).get(0);
+				page.click();
+				Tareas = CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[1]", 2);
+				categorias = CustomEsperaCargaPaginaxpath(driver, "//table/tbody/tr/td[4]", 2);
+			}
+			if(i<10){
+				assertTrue(tareasSinCategoria.contains(Tareas.get(i%8).getText()));
+				assertEquals("",categorias.get(i%8).getText()); //Las tareas sin categoría tienen " " como categoría.
+			}
+			else{
+				String categoriaEsperada = tareasCategoria.get(Tareas.get(i%8).getText());
+				assertTrue(categoriaEsperada!=null);
+				assertEquals(categoriaEsperada,categorias.get(i%8).getText()); //Las tareas sin categoría tienen " " como categoría.
+			}
+		}
+		
     }
 	//PR20: Funcionamiento correcto de la ordenación por fecha planeada.
 	@Test
@@ -768,7 +871,7 @@ public class PlantillaSDI2_Tests1617 {
     }
 	//PR21: Comprobar que las tareas que no están en rojo son las de hoy y además las que deben ser.
 	@Test
-    public void prueba21() {
+    public void prueba21() throws InterruptedException {
 		loginUser();
 		
 		//Nos dirigimos al listado de tareas de hoy
@@ -778,11 +881,13 @@ public class PlantillaSDI2_Tests1617 {
 		//ordenamos por fecha ya que sabemos a priori que tareas son als que estan retrasadas y evitamos paginar de mas.
 		WebElement botonFechaPlaneada = CustomEsperaCargaPaginaxpath(driver, "//table/thead/tr/th[3]", 2).get(0);
 		botonFechaPlaneada.click();
+		Thread.sleep(500);
+		botonFechaPlaneada.click();
 		
-		//Introducimos las tareas no retrasadas que son las sonde hoy 11-20
+		//Introducimos las tareas no retrasadas que son las son de hoy 11-20
 		Map<String, String> tareasEsperadas = new HashMap<String,String>();
 		for(int i=11;i<=20;i++){
-			tareasEsperadas.put("Tarea"+i, DateUtil.today().toString());
+			tareasEsperadas.put("Tarea"+i, df.format(DateUtil.today()));
 		}
 		
 		//Primera Página
@@ -792,8 +897,8 @@ public class PlantillaSDI2_Tests1617 {
 		int attempts =0;
 		while(attempts <2){
 			try{
-				nombresRetrasadas = CustomEsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[!(contains(@class,'delay'))]/td[1]", 2);
-				planeadaRetrasada = CustomEsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[!(contains(@class,'delay'))]/td[3]", 2);
+				nombresRetrasadas = CustomEsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[not(contains(@class,'delay'))]/td[1]", 2);
+				planeadaRetrasada = CustomEsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[not(contains(@class,'delay'))]/td[3]", 2);
 			}catch(StaleElementReferenceException e){
 				
 			}
@@ -801,8 +906,8 @@ public class PlantillaSDI2_Tests1617 {
 		}
 		
 		for(int i=0;i<nombresRetrasadas.size();i++){
-			String fechaPlaneada = tareasEsperadas.get(nombresRetrasadas.get(i).toString());
-			assertTrue(fechaPlaneada==null);
+			String fechaPlaneada = tareasEsperadas.get(nombresRetrasadas.get(i).getText());
+			assertTrue(fechaPlaneada!=null);
 			assertEquals(fechaPlaneada,planeadaRetrasada.get(i).getText());
 		}
 		
@@ -822,8 +927,8 @@ public class PlantillaSDI2_Tests1617 {
 		}
 		
 		for(int i=0;i<nombresRetrasadas.size();i++){
-			String fechaPlaneada = tareasEsperadas.get(nombresRetrasadas.get(i).toString());
-			assertTrue(fechaPlaneada==null);
+			String fechaPlaneada = tareasEsperadas.get(nombresRetrasadas.get(i).getText());
+			assertTrue(fechaPlaneada!=null);
 			assertEquals(fechaPlaneada,planeadaRetrasada.get(i).getText());
 		}
 		
@@ -883,55 +988,82 @@ public class PlantillaSDI2_Tests1617 {
     }
 	//PR23: Comprobar que las tareas de hoy y futuras no están en rojo y que son las que deben ser.
 	@Test
-    public void prueba23() {
+    public void prueba23() throws InterruptedException {
 		loginUser();
 		
 		//Nos dirigimos al listado de tareas de semana
-		WebElement botonHoy = CustomEsperaCargaPaginaxpath(driver, "//a[contains(@id,'tareas-semana')]", 2).get(0);
-		botonHoy.click();
+		WebElement botonSemana = CustomEsperaCargaPaginaxpath(driver, "//a[contains(@id,'tareas-semana')]", 2).get(0);
+		botonSemana.click();
+		
+		//ordenamos por fecha ya que sabemos a priori que tareas son als que estan retrasadas y evitamos paginar de mas.
+		WebElement botonFechaPlaneada = CustomEsperaCargaPaginaxpath(driver, "//table/thead/tr/th[3]", 2).get(0);
+		botonFechaPlaneada.click();
+		Thread.sleep(500);
+		botonFechaPlaneada.click();
 		
 		//Sabemos las tareas que no estan retrasadas con su fecha
 		Map<String,String> tareasNoRetrasadas = new HashMap<String,String>();
 		for(int i=1;i<=20;i++){
 			if(i<=10) // del 1-10 son futuras
-				tareasNoRetrasadas.put("Tarea"+i, DateUtil.addDays(DateUtil.today(), 6).toString());
+				tareasNoRetrasadas.put("Tarea"+i,df.format(DateUtil.addDays(DateUtil.today(), 6)));
 			else //Las de hoy
-				tareasNoRetrasadas.put("Tarea"+i, DateUtil.today().toString());
+				tareasNoRetrasadas.put("Tarea"+i, df.format(DateUtil.today()));
 		}
 		
-		int rowCount=1;
+		List<WebElement> nombres =null;
+		List<WebElement> planeadas=null;
+		
+		int attempts =0;
+		while(attempts <2){
+			try{
+				nombres = CustomEsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[not(contains(@class,'delay'))]/td[1]",2);
+				planeadas = CustomEsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[not(contains(@class,'delay'))]/td[3]", 2);
+			}catch(StaleElementReferenceException e){
+				
+			}
+			attempts++;
+		}
+		
 		//Cogemos todas las tareas
 		for(int i=1;i<=20;i++){
 			if(i==9){
 				//Debemos pasar a la sigueinte página.
 				WebElement page = CustomEsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[2]", 2).get(0);
 				page.click();
-				rowCount=1;
+				attempts =0;
+				while(attempts <2){
+					try{
+						nombres = CustomEsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[not(contains(@class,'delay'))]/td[1]",2);
+						planeadas = CustomEsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[not(contains(@class,'delay'))]/td[3]", 2);
+					}catch(StaleElementReferenceException e){
+						
+					}
+					attempts++;
+				}
 			}
 			if(i==17){
 				//Debemos pasar a la sigueinte página.
 				WebElement page = CustomEsperaCargaPaginaxpath(driver, "//span[@class='ui-paginator-pages']/a[3]", 2).get(0);
 				page.click();
-				rowCount=1;
-			}
-			String nombre ="";
-			String planeada="";
-			
-			int attempts =0;
-			while(attempts <2){
-				try{
-					nombre = CustomEsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[!(contains(@class,'delay'))]/td[1]",2).get(0).toString();
-					planeada = CustomEsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[!(contains(@class,'delay'))]/td[3]", 2).get(0).getText();
-				}catch(StaleElementReferenceException e){
-					
+				attempts =0;
+				while(attempts <2){
+					try{
+						nombres = CustomEsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[not(contains(@class,'delay'))]/td[1]",2);
+						planeadas = CustomEsperaCargaPaginaxpath(driver, "//div[contains(@id,'table-tasks')]/div/table/tbody/tr[not(contains(@class,'delay'))]/td[3]", 2);
+					}catch(StaleElementReferenceException e){
+						
+					}
+					attempts++;
 				}
-				attempts++;
 			}
 			
-			String planeadaEsperada = tareasNoRetrasadas.get(nombre);
-			assertTrue(planeadaEsperada!=null);
-			assertEquals(planeadaEsperada,planeada);
-			rowCount++;
+			
+			
+			if(i<planeadas.size()){ //No sabemos cuantas pueden aparecer. PRECONDICION DE QUE SABEMOS QUE VIENEN ANTES SIEMPRE LAS RETRASADAS!!!
+				String planeadaEsperada = tareasNoRetrasadas.get(nombres.get(i%8).getText());
+				assertTrue(planeadaEsperada!=null);
+				assertEquals(planeadaEsperada,planeadas.get(i%8).getText());
+			}
 		}
     }
 	//PR24: Funcionamiento correcto de la ordenación por día.
@@ -981,15 +1113,15 @@ public class PlantillaSDI2_Tests1617 {
 			
 			if(i<=9){
 				//Retrasadas categoria.
-				assertEquals(DateUtil.addDays(DateUtil.today(), (i-30)).toString(),planeada);
+				assertEquals(df.format(DateUtil.addDays(DateUtil.today(), (i-30))),planeada);
 			}
 			else if (i<=19){
 				//Hoy
-				assertEquals(DateUtil.today().toString(),planeada);
+				assertEquals(df.format(DateUtil.today()),planeada);
 			}
 			else{
 				//Futuro, 6 dias
-				assertEquals(DateUtil.addDays(DateUtil.today(), 6).toString(),planeada);
+				assertEquals(df.format(DateUtil.addDays(DateUtil.today(), 6)),planeada);
 			}
 			rowCount++;
 		}
@@ -1095,25 +1227,27 @@ public class PlantillaSDI2_Tests1617 {
     }
 	//PR33: Salir de sesión desde cuenta de administrador.
 	@Test
-    public void prueba33() {
+    public void prueba33() throws InterruptedException {
 		loginAdmin();
 		
 		//Hacemos click en el boton de cerrar sesión.
 		WebElement botonCerrarSesión = CustomEsperaCargaPaginaxpath(driver, "//button[contains(@id,'item-cerrarSesion')]", 2).get(0);
 		botonCerrarSesión.click();
 		
+		Thread.sleep(500);
 		//Comrpobamos que estamos en la página de login.
 		SeleniumUtils.textoPresentePagina(driver, "Autentificación"); 
 		
     }
 	//PR34: Salir de sesión desde cuenta de usuario normal.
 	@Test
-    public void prueba34() {
+    public void prueba34() throws InterruptedException {
 		loginUser();
 		//Hacemos click en el boton de cerrar sesión.
 		WebElement botonCerrarSesión = CustomEsperaCargaPaginaxpath(driver, "//button[contains(@id,'item-cerrarSesion')]", 2).get(0);
 		botonCerrarSesión.click();
 		
+		Thread.sleep(500);
 		//Comrpobamos que estamos en la página de login.
 		SeleniumUtils.textoPresentePagina(driver, "Autentificación");
     }
